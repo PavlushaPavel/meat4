@@ -12,6 +12,7 @@ import { ExternalButton } from '@/ui/ExternalButton';
 import { MetalPanel } from '@/ui/MetalPanel';
 import { Legend, Plate } from '@/ui/Plate';
 import { CHAIN, HOME_SOURCE, LAB_NAME, ZONES } from '@/world';
+import { haptics } from '@/lib/telegram';
 
 /**
  * Шаг 8. Финал: связка собрана, доказательство, цена.
@@ -49,6 +50,9 @@ export function BundleScreen() {
    */
   useEffect(() => {
     assemble('landing');
+    // Связка замкнулась. Тот же отклик, что у первой детали: последняя ничем
+    // не «главнее» — важен не участок, а то, что цепочка собралась целиком.
+    haptics.medium();
   }, [assemble]);
 
   /**

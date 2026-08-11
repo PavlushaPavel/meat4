@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { sceneUi } from '@/content/scene';
 import { Screen } from '@/ui/CityStage';
 import { Button } from '@/ui/Button';
 import { Legend } from '@/ui/Plate';
+import { haptics } from '@/lib/telegram';
 import { cn } from '@/lib/cn';
 import type { Beat } from './beats';
 import type { BeatRun } from './useBeats';
@@ -24,7 +26,6 @@ export function SceneShell<Cue extends string>({
   stage,
   cta,
   onCta,
-  skipLabel = 'ПРОПУСТИТЬ',
   className,
 }: {
   run: BeatRun<Cue>;
@@ -35,18 +36,27 @@ export function SceneShell<Cue extends string>({
   /** Подпись главного действия, которое появляется, когда сцена договорила. */
   cta: string;
   onCta: () => void;
-  skipLabel?: string;
   className?: string;
 }) {
   const reduceMotion = useReducedMotion();
-  const { said, done, advance, finish } = run;
+  const { index, said, done, advance, finish } = run;
+
+  /**
+   * Тап по сцене — жест выбора, а не удара: человек перелистывает мысль, а не
+   * запускает событие мира. Отсюда `selectionChanged`, самый тихий отклик из
+   * доступных. Вне Telegram вызов молча ничего не делает.
+   */
+  function tap() {
+    haptics.select();
+    advance();
+  }
 
   return (
     <Screen className={cn('min-h-dvh justify-between gap-5', className)}>
       <button
         type="button"
-        onClick={done ? undefined : advance}
-        aria-label={done ? undefined : 'Дальше'}
+        onClick={done ? undefined : tap}
+        aria-label={done ? undefined : sceneUi.tapAria}
         aria-disabled={done}
         className="flex flex-1 cursor-default flex-col gap-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-neon/60"
       >
@@ -55,6 +65,7 @@ export function SceneShell<Cue extends string>({
       </button>
 
       <footer className="flex shrink-0 flex-col gap-3">
+        <TapHint visible={!done && index < HINT_BEATS} />
         <SceneProgress index={said.length} total={total} done={done} />
         <AnimatePresence mode="wait" initial={false}>
           {done ? (
@@ -72,11 +83,14 @@ export function SceneShell<Cue extends string>({
             <motion.button
               key="skip"
               type="button"
-              onClick={finish}
+              onClick={() => {
+                haptics.light();
+                finish();
+              }}
               exit={{ opacity: 0 }}
               className="min-h-11 self-end px-2 text-legend uppercase tracking-legend text-ink-dim transition-colors hover:text-ink"
             >
-              {skipLabel}
+              {sceneUi.skip}
             </motion.button>
           )}
         </AnimatePresence>
@@ -120,6 +134,56 @@ function BeatLog<Cue extends string>({ said }: { said: readonly Beat<Cue>[] }) {
         </motion.div>
       ))}
     </div>
+  );
+}
+
+/**
+ * Сколько тактов держится подсказка про тап.
+ *
+ * ДВА, А НЕ ВСЮ СЦЕНУ. Подсказка учит одному жесту, и после того как жест
+ * понят, она превращается в шум поверх рассказа. Два такта — это примерно
+ * десять секунд: достаточно, чтобы заметить, мало, чтобы надоесть. Тот, кто не
+ * заметил, ничего не теряет: сцена и так идёт сама, а внизу остаётся
+ * «ПРОПУСТИТЬ».
+ */
+const HINT_BEATS = 2;
+
+/**
+ * Подсказка, что по сцене можно тапать.
+ *
+ * ЗАЧЕМ ОНА ВООБЩЕ НУЖНА. Сцена идёт сама, кнопок на ней нет, и человек
+ * физически не может догадаться, что темп в его руках: единственный видимый
+ * элемент управления — «ПРОПУСТИТЬ», а он разворачивает всё сразу и потому
+ * читается как «сдаться», а не как «чуть быстрее».
+ *
+ * ПОЧЕМУ ТОЧКА, А НЕ ИКОНКА ПАЛЬЦА. Палец пришлось бы рисовать поверх текста,
+ * и он перекрыл бы реплику ровно в тот момент, когда её читают. Пульсирующая
+ * точка рядом с подписью говорит то же самое, ничего не закрывая.
+ */
+function TapHint({ visible }: { visible: boolean }) {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <AnimatePresence initial={false}>
+      {visible && (
+        <motion.div
+          key="hint"
+          initial={reduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.4 }}
+          className="flex items-center gap-2 self-center"
+        >
+          <motion.span
+            aria-hidden="true"
+            className="size-1.5 rounded-full bg-neon"
+            animate={reduceMotion ? undefined : { opacity: [0.25, 1, 0.25] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <Legend tone="dim">{sceneUi.tapHint}</Legend>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

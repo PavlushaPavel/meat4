@@ -12,6 +12,7 @@ import { worldAsset } from '@/ui/assets';
 import { Lamp, MetalPanel } from '@/ui/MetalPanel';
 import { Legend, Plate } from '@/ui/Plate';
 import { track } from '@/lib/analytics';
+import { haptics } from '@/lib/telegram';
 import { cn } from '@/lib/cn';
 
 /**
@@ -85,6 +86,10 @@ export function TestScreen() {
   useEffect(() => {
     if (!finished) return;
     pass();
+    // Створки расходятся — самый тяжёлый отклик во всей воронке. Он тут ровно
+    // один раз, и это делает его событием: если так отзывалось бы каждое
+    // нажатие, открытие лаборатории ничем бы не отличалось от «дальше».
+    haptics.heavy();
     track('test', { result: 'passed' });
   }, [finished, pass]);
 
@@ -103,6 +108,11 @@ export function TestScreen() {
     // разбор успел бы отрисоваться уже со следующим вопросом.
     setAnswered({ question, chosen: optionId, correct, index: cursor + 1 });
     answer(correct, question.topic);
+    // Единственное место воронки, где телефон говорит «да» или «нет». Отклик
+    // системный, а не импульс: он должен читаться как ВЕРДИКТ, а не как
+    // подтверждение нажатия — иначе неотличим от обычной кнопки.
+    if (correct) haptics.success();
+    else haptics.error();
     // Дословных ответов не отправляем — считаем прохождение, а не человека.
     track('test', {
       question: question.id,

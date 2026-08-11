@@ -3,10 +3,11 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import App from '@/App';
 import { useFunnel } from '@/store/funnel';
 import { STEPS } from '@/router/flow';
-import { preframe, conversion } from '@/content/preframe';
+import { preframe, preframeBeats, conversion } from '@/content/preframe';
 import { LESSONS, LESSON_UI } from '@/content/lessons';
 import { audienceScene, bundleFinale } from '@/content/city';
 import { quizBank, quizCopy, LIVES } from '@/content/quiz';
+import { sceneUi } from '@/content/scene';
 import { ZONES } from '@/world';
 
 /**
@@ -47,8 +48,8 @@ async function skipScene() {
   await press(SKIP_LABEL);
 }
 
-/** Подпись «пропустить» задана в `SceneShell` по умолчанию и нигде не меняется. */
-const SKIP_LABEL = 'ПРОПУСТИТЬ';
+/** Подпись «пропустить» одна на все сцены и живёт в контенте. */
+const SKIP_LABEL = sceneUi.skip;
 
 /**
  * Найти вопрос, который сейчас на экране.
@@ -96,9 +97,16 @@ describe('воронка при пустом окружении', () => {
     render(<App />);
 
     // --- Шаг 1. Префрейм: сообщение клиента и отъезд камеры ---
+    /**
+     * Подсказка про тап обязана быть на экране С ПЕРВОГО КАДРА. Сцена идёт
+     * сама и кнопок не показывает: без этой строки человек не может узнать,
+     * что темп в его руках, а догадаться неоткуда.
+     */
+    expect(screen.getByText(sceneUi.tapHint)).toBeTruthy();
+
     // Первый такт — уведомление с «печатает…»; текст целиком человек видит
     // тактом позже. Тап делает ровно то же, что сделало бы ожидание таймера.
-    await press('Дальше');
+    await press(sceneUi.tapAria);
     expect(await screen.findByText(preframe.message.text)).toBeTruthy();
     await skipScene();
     await press(preframe.cta);
@@ -155,6 +163,39 @@ describe('воронка при пустом окружении', () => {
     // И это действительно конец маршрута, а не остановка посередине.
     expect(useFunnel.getState().step).toBe(STEPS[STEPS.length - 1]);
   }, 30_000);
+});
+
+describe('подсказка про тап', () => {
+  beforeEach(() => {
+    cleanup();
+    useFunnel.setState(useFunnel.getInitialState(), true);
+    window.localStorage.clear();
+  });
+
+  /**
+   * Подсказка учит ОДНОМУ жесту и обязана уйти. Оставшись до конца сцены, она
+   * из помощи превращается в мигающую строку поверх рассказа — а рассказ здесь
+   * и есть продукт. Проверяется поведение, а не число тактов: сколько именно их
+   * держать, решает `HINT_BEATS`, и менять его можно свободно.
+   */
+  it('исчезает, когда жест уже понят', async () => {
+    render(<App />);
+    expect(screen.getByText(sceneUi.tapHint)).toBeTruthy();
+
+    /**
+     * Три такта — заведомо больше, чем держится подсказка, и заведомо меньше
+     * пятнадцати тактов сцены. Опрашивать её присутствие в цикле нельзя:
+     * подсказка уходит с анимацией и ещё живёт в разметке, пока та идёт, —
+     * цикл успел бы протапать всю сцену и «доказать», что она не исчезает.
+     */
+    for (let i = 0; i < 3; i += 1) await press(sceneUi.tapAria);
+    await waitFor(() => expect(screen.queryByText(sceneUi.tapHint)).toBeNull());
+
+    // И ушла она посреди рассказа, а не вместе с его концом: сцена ещё идёт,
+    // главного действия на экране пока нет.
+    expect(screen.queryByRole('button', { name: preframe.cta })).toBeNull();
+    expect(preframeBeats.length).toBeGreaterThan(3);
+  });
 });
 
 describe('ошибка в проверке', () => {

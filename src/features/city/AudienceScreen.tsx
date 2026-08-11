@@ -9,6 +9,7 @@ import { useFunnel } from '@/store/funnel';
 import { ConversionChain } from '@/ui/ConversionChain';
 import { MetalPanel } from '@/ui/MetalPanel';
 import { Legend } from '@/ui/Plate';
+import { haptics } from '@/lib/telegram';
 
 /**
  * Шаг 4. Пятнадцать секунд города между первой и второй главой.
@@ -45,7 +46,12 @@ export function AudienceScreen() {
    * событий сохранён, ожидание убрано.
    */
   useEffect(() => {
-    if (landed) assemble('audience');
+    if (!landed) return;
+    assemble('audience');
+    // Деталь садится в связку — единственный удар этой сцены. Он совпадает с
+    // движением на экране, а не с нажатием: человек в этот момент ничего не
+    // трогает, и отклик работает как звук встающей на место детали.
+    haptics.medium();
   }, [landed, assemble]);
 
   /**
