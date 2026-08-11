@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { conversion, conversionBeats, type ConversionCue } from '@/content/preframe';
 import { SceneShell } from '@/scene/SceneShell';
+import { calm, dur, ease, stagger, tween } from '@/scene/motion';
 import { useBeats } from '@/scene/useBeats';
 import { useNav } from '@/router/useNav';
 import { ConversionChain } from '@/ui/ConversionChain';
@@ -74,7 +75,7 @@ function ConversionStage({ index, cue }: { index: number; cue: ConversionCue }) 
         initial={reduceMotion ? false : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={reduceMotion ? undefined : { opacity: 0 }}
-        transition={{ duration: reduceMotion ? 0 : 0.36, ease: [0.16, 1, 0.3, 1] }}
+        transition={calm(reduceMotion, tween(dur.base))}
         className="flex flex-col justify-end gap-3"
       >
         {key === 'sources' && <SourcesScene wave={cueOrdinal(index, 'sources')} />}
@@ -156,11 +157,10 @@ function RoadsScene({ toClient }: { toClient: boolean }) {
               vectorEffect="non-scaling-stroke"
               initial={reduceMotion ? false : { pathLength: 0, opacity: 0.2 }}
               animate={{ pathLength: 1, opacity: 1 }}
-              transition={{
-                duration: reduceMotion ? 0 : 0.85,
-                delay: reduceMotion ? 0 : i * 0.16,
-                ease: [0.16, 1, 0.3, 1],
-              }}
+              transition={calm(reduceMotion, {
+                ...tween(dur.epic),
+                delay: i * stagger.reveal,
+              })}
             />
           );
         })}
@@ -198,7 +198,9 @@ function ChainScene() {
       <motion.div
         initial={reduceMotion ? false : { y: 64, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: reduceMotion ? 0 : 1, ease: [0.16, 1, 0.3, 1] }}
+        // Связка не появляется и не исчезает — она ЕДЕТ по кадру вместе с
+        // камерой, поэтому кривая с разгоном и торможением, а не ease-out.
+        transition={calm(reduceMotion, tween(dur.epic, ease.inOut))}
         // Масштаб — это расстояние камеры: целиком связка в кадр сцены не
         // помещается, а резать её нельзя, вся мысль в том, что она длинная.
         className="origin-top scale-[0.88]"
@@ -238,10 +240,10 @@ function DominoScene() {
               key={zone}
               initial={reduceMotion ? false : { opacity: 0, scaleX: 0.4 }}
               animate={{ opacity: 1, scaleX: 1 }}
-              transition={{
-                duration: reduceMotion ? 0 : 0.3,
-                delay: reduceMotion ? 0 : i * 0.07,
-              }}
+              transition={calm(reduceMotion, {
+                ...tween(dur.base),
+                delay: i * stagger.list,
+              })}
               // Верхний сегмент — трафик: единственное, что у человека уже
               // есть. Остальные шесть пока чужие, поэтому не светятся.
               className={cn('h-1.5 origin-left', i === 0 ? 'bg-neon-dim' : 'bg-metal-hi')}

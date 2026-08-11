@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from 'motion/react';
 import { HOME_SOURCE, SOURCES, type SourceId } from '@/world';
+import { calm, dur, stagger, tween } from '@/scene/motion';
 import { Legend } from '@/ui/Plate';
 import { cn } from '@/lib/cn';
 
@@ -48,13 +49,12 @@ export function SourceGrid({
             // зажигаться заново — они уже горели, и повтор читался бы как сбой.
             initial={false}
             animate={{ opacity: on ? 1 : 0.3, scale: on ? 1 : 0.97 }}
-            transition={{
-              duration: reduceMotion ? 0 : 0.42,
+            transition={calm(reduceMotion, {
+              ...tween(dur.screen),
               // Очередь загорания живёт в задержке, а не в отдельном таймере:
               // порядок в `lit` — единственный источник правды о ней.
-              delay: reduceMotion || !on ? 0 : order * 0.16,
-              ease: [0.16, 1, 0.3, 1],
-            }}
+              delay: on ? order * stagger.reveal : 0,
+            })}
             className={cn(
               'flex min-h-20 flex-col justify-between gap-2 rounded-panel border p-2.5',
               on && home && 'neon-edge',

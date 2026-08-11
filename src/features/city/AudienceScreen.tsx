@@ -4,6 +4,7 @@ import { audienceScene } from '@/content/city';
 import { prevStep, type StepKey } from '@/router/flow';
 import { useNav } from '@/router/useNav';
 import { SceneShell } from '@/scene/SceneShell';
+import { calm, dur, tween } from '@/scene/motion';
 import { useBeats } from '@/scene/useBeats';
 import { useFunnel } from '@/store/funnel';
 import { ConversionChain } from '@/ui/ConversionChain';
@@ -116,7 +117,7 @@ function AssemblyStage({
               key="part"
               initial={false}
               exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 22, scale: 0.96 }}
-              transition={{ duration: reduceMotion ? 0 : 0.42, ease: [0.16, 1, 0.3, 1] }}
+              transition={calm(reduceMotion, tween(dur.screen))}
             >
               <MetalPanel className="flex items-center gap-3 px-3 py-1.5">
                 <Legend tone="dim">{audienceScene.slot}</Legend>
@@ -132,7 +133,7 @@ function AssemblyStage({
               key="lit"
               initial={reduceMotion ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: reduceMotion ? 0 : 0.3 }}
+              transition={calm(reduceMotion, tween(dur.base))}
             >
               <Legend tone="neon">{audienceScene.lit}</Legend>
             </motion.div>

@@ -1,7 +1,16 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { useEffect, useState } from 'react';
+import {
+  AnimatePresence,
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useTransform,
+  type MotionValue,
+} from 'motion/react';
 import { preframe, preframeBeats, type PreframeCue } from '@/content/preframe';
 import { SceneShell } from '@/scene/SceneShell';
+import { calm, dur, ease, tween } from '@/scene/motion';
 import { useBeats } from '@/scene/useBeats';
 import { useNav } from '@/router/useNav';
 import { AdConsole } from '@/ui/AdConsole';
@@ -70,7 +79,7 @@ function PreframeStage({ index, cue }: { index: number; cue: PreframeCue }) {
         initial={reduceMotion ? false : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={reduceMotion ? undefined : { opacity: 0 }}
-        transition={{ duration: reduceMotion ? 0 : 0.36, ease: [0.16, 1, 0.3, 1] }}
+        transition={calm(reduceMotion, tween(dur.base))}
         className="flex flex-col justify-end gap-3"
       >
         {cue === 'message' && <MessageScene opened={cueOrdinal(index, 'message') > 0} />}
@@ -150,7 +159,7 @@ function OpenedMessage() {
     <motion.div
       initial={reduceMotion ? false : { opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
+      transition={calm(reduceMotion, tween(dur.base))}
       className="rounded-2xl border border-white/10 bg-tg-scene/95 p-3.5 shadow-[0_18px_40px_-16px_#000]"
     >
       <div className="flex items-center gap-2.5 border-b border-white/10 pb-2.5">
@@ -196,7 +205,7 @@ function AuthorScene() {
           aria-hidden="true"
           initial={reduceMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: reduceMotion ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] }}
+          transition={calm(reduceMotion, tween(dur.screen))}
           className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col items-center"
         >
           {/* Кромка сверху — свет вывески района за спиной. */}
@@ -232,81 +241,158 @@ function ConsoleScene() {
 // ---------------------------------------------------------------------------
 
 /**
- * Масштаб группы на каждом слое отъезда. Считать его из размеров рамок нельзя:
- * значения подобраны так, чтобы текущий слой заполнял кадр целиком, а не
- * болтался в его середине.
+ * Куда встаёт камера на каждом такте отъезда. Считать это из размеров рамок
+ * нельзя: значения подобраны так, чтобы текущий слой заполнял кадр целиком, а
+ * не болтался в его середине.
+ *
+ * Цель ОДНА НА ВСЕ СЛОИ: в покое отъезд обязан выглядеть ровно тем же
+ * вложением рамок, что и раньше. Расходятся слои не здесь, а во времени.
  */
 const SCALES = [2.3, 1.6, 1.2, 1];
 
 /**
+ * ЧЕМ ДАЛЬШЕ ПЛАН, ТЕМ ОН МЕДЛЕННЕЕ.
+ *
+ * Это единственное, что отличает отъезд камеры от зума. Пока все четыре рамки
+ * ехали одним масштабом, кадр просто менял увеличение — глубины в нём не было,
+ * потому что взаимного движения планов не было тоже. Настоящий отъезд виден
+ * именно по расхождению: ближний план уходит из кадра заметно раньше дальнего,
+ * и разницу человек читает как расстояние между ними.
+ *
+ * Разводим слои ПО СКОРОСТИ, а не по величине. Если бы у слоёв были разные
+ * цели масштаба, рамки в покое перестали бы быть вложением и разъехались бы
+ * картинками; здесь же цель общая, и к концу движения геометрия та же.
+ *
+ * Лестница натянута между `dur.screen` и `dur.epic` — крайние значения берутся
+ * из словаря, а доля глубины числом времени не является. Ближнее рабочее место
+ * укладывается в 0.42 c, улица приезжает за 0.9 c: чтобы расхождение читалось,
+ * разница должна быть кратной, а не косметической.
+ */
+function layerDuration(index: number, count: number): number {
+  const share = index / Math.max(1, count - 1);
+  return dur.screen + (dur.epic - dur.screen) * share;
+}
+
+/**
  * Отъезд камеры: рабочее место → квартира → дом → улица.
  *
- * Рамки вложены физически, одна в другую, и отъезд — это ОДНО изменение
- * масштаба группы. Отдельными картинками слоёв это выглядело бы как смена
- * слайдов: человек должен видеть, что комната никуда не делась, просто вокруг
- * неё оказалось всё остальное.
+ * Рамки вложены физически, одна в другую: человек должен видеть, что комната
+ * никуда не делась, просто вокруг неё оказалось всё остальное. Отдельными
+ * картинками слоёв это выглядело бы как смена слайдов.
+ *
+ * Сама группа НЕ МАСШТАБИРУЕТСЯ: масштаб отдан слоям поимённо, иначе они не
+ * могли бы разъехаться по скорости. Здесь остаётся только кадр — окно, за
+ * границы которого уезжает всё лишнее.
  */
 function Pullback({ layers, depth }: { layers: readonly string[]; depth: number }) {
-  const reduceMotion = useReducedMotion();
-  const scale = SCALES[Math.min(depth, SCALES.length - 1)] ?? 1;
-
-  const nested = layers.reduce<ReactNode>(
-    (inner, label, i) => (
-      <Frame key={label} label={label} shown={depth >= i} outer={i === layers.length - 1}>
-        {inner}
-      </Frame>
-    ),
-    <Desk />,
-  );
+  const target = SCALES[Math.min(depth, SCALES.length - 1)] ?? 1;
+  // Неподвижная опора для самого дальнего слоя: у него нет рамки-родителя, а
+  // делить своё положение на родительское должны все одинаково.
+  const ground = useMotionValue(1);
 
   return (
     <div className="relative h-56 overflow-hidden rounded-panel border border-line bg-scene-deep/50">
-      <motion.div
-        className="absolute inset-0 grid place-items-center"
-        initial={false}
-        animate={{ scale }}
-        transition={{ duration: reduceMotion ? 0 : 1.1, ease: [0.16, 1, 0.3, 1] }}
-      >
-        {nested}
-      </motion.div>
+      <div className="absolute inset-0 grid place-items-center">
+        {/* Строим от улицы внутрь: родитель обязан существовать раньше ребёнка,
+            потому что отдаёт ему своё положение. */}
+        <Frame
+          layers={layers}
+          index={layers.length - 1}
+          depth={depth}
+          target={target}
+          outerScale={ground}
+        />
+      </div>
     </div>
   );
 }
 
 /**
- * Одна рамка отъезда. Прозрачностью КОНТЕЙНЕРА не управляем: она наследуется
- * вложенными слоями, и спрятанная улица утащила бы за собой и рабочее место.
- * Поэтому невидимый слой — это прозрачная кромка, а не прозрачный блок.
+ * Один план отъезда: рамка со своей скоростью и всё, что внутри неё.
+ *
+ * Прозрачностью КОНТЕЙНЕРА не управляем: она наследуется вложенными слоями, и
+ * спрятанная улица утащила бы за собой и рабочее место. Поэтому невидимый слой
+ * — это прозрачная кромка, а не прозрачный блок.
  */
 function Frame({
-  label,
-  shown,
-  outer,
-  children,
+  layers,
+  index,
+  depth,
+  target,
+  outerScale,
 }: {
-  label: string;
-  shown: boolean;
-  outer: boolean;
-  children: ReactNode;
+  layers: readonly string[];
+  /** Номер плана от рабочего места (0) к улице. Он же — глубина в кадре. */
+  index: number;
+  /** Сколько тактов отъезда уже прошло. */
+  depth: number;
+  /** Общее для всех слоёв положение камеры на этом такте. */
+  target: number;
+  /** Положение рамки, внутри которой мы лежим. */
+  outerScale: MotionValue<number>;
 }) {
+  const reduceMotion = useReducedMotion();
+  const shown = depth >= index;
+  const outer = index === layers.length - 1;
+
+  // Собственное положение плана: он идёт к общей цели, но своим темпом.
+  const scale = useMotionValue(target);
+  useEffect(() => {
+    const camera = animate(
+      scale,
+      target,
+      // `ease.inOut` — у камеры есть масса: она разгоняется и тормозит. Кривая
+      // появления здесь была бы враньём, потому что слои не появляются.
+      calm(reduceMotion, tween(layerDuration(index, layers.length), ease.inOut)),
+    );
+    return () => camera.stop();
+  }, [scale, target, index, layers.length, reduceMotion]);
+
+  /**
+   * ВЛОЖЕННЫЕ ТРАНСФОРМАЦИИ ПЕРЕМНОЖАЮТСЯ, и слой, применивший к себе своё
+   * положение целиком, получил бы ещё и положение всех рамок над собой. Поэтому
+   * на экран уходит ЧАСТНОЕ: своё, делённое на родительское. В покое оба равны
+   * общей цели, частное обращается в единицу — и вложение выглядит нетронутым.
+   */
+  const own = useTransform([scale, outerScale], ([mine, around]: number[]) =>
+    around ? mine / around : mine,
+  );
+
   return (
-    <div
+    <motion.div
+      // Четыре рамки зажигались разом и по 700 мс каждая — поверх отъезда это
+      // шло отдельной медленной волной, длиннее любого экранного перехода в
+      // приложении. Кромка и подпись — событие уровня экрана, им хватает
+      // `dur.screen`. Переход сужен до цвета кромки: больше рамка ничего не
+      // меняет, а `transition-colors` объявлял переходом и цвет текста внутри.
       className={cn(
-        'relative grid place-items-center rounded-plate border p-5 transition-colors duration-700',
+        'relative grid place-items-center rounded-plate border p-5 transition-[border-color]',
         shown ? 'border-line' : 'border-transparent',
         outer && 'size-52',
       )}
+      style={{ scale: own, transitionDuration: `${dur.screen}s` }}
     >
       <span
         className={cn(
-          'legend absolute left-2 top-1 transition-opacity duration-700',
+          'legend absolute left-2 top-1 transition-opacity',
           shown ? 'text-ink-dim opacity-100' : 'opacity-0',
         )}
+        style={{ transitionDuration: `${dur.screen}s` }}
       >
-        {label}
+        {layers[index]}
       </span>
-      {children}
-    </div>
+      {index > 0 ? (
+        <Frame
+          layers={layers}
+          index={index - 1}
+          depth={depth}
+          target={target}
+          outerScale={scale}
+        />
+      ) : (
+        <Desk />
+      )}
+    </motion.div>
   );
 }
 
@@ -343,9 +429,10 @@ function DistrictScene() {
         initial={reduceMotion ? false : { opacity: 0 }}
         // Неон включается не плавно, а с перебоем: так зажигается вывеска.
         animate={reduceMotion ? { opacity: 1 } : { opacity: [0, 1, 0.3, 1] }}
-        transition={
-          reduceMotion ? { duration: 0 } : { duration: 0.9, times: [0, 0.4, 0.6, 1] }
-        }
+        transition={calm(reduceMotion, {
+          ...tween(dur.epic, ease.out),
+          times: [0, 0.4, 0.6, 1],
+        })}
       >
         <MetalPanel className="px-4 py-2.5">
           <span className="neon-ink font-display text-lg font-semibold uppercase tracking-wide">

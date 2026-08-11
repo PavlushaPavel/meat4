@@ -4,6 +4,7 @@ import { LIVES, quizBank, quizCopy } from '@/content/quiz';
 import type { QuizQuestion, QuizTopic } from '@/content/types';
 import { REVIEW_TARGET, type StepKey } from '@/router/flow';
 import { useNav } from '@/router/useNav';
+import { calm, dur, ease, spring, tween } from '@/scene/motion';
 import { useFunnel } from '@/store/funnel';
 import { ZONES, zoneState } from '@/world';
 import { Button } from '@/ui/Button';
@@ -213,7 +214,7 @@ function GateView({ offerOpen, onStart }: { offerOpen: boolean; onStart: () => v
           <motion.div
             initial={reduceMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+            transition={spring.mark}
             className="neon-edge flex items-center justify-between gap-3 rounded-plate px-3 py-2"
           >
             <span className="flex flex-col">
@@ -324,7 +325,7 @@ function Lives({ lives }: { lives: number }) {
               // Она коротко вспыхивает аварийным и садится: заметно, но без
               // тряски всего экрана.
               animate={reduceMotion ? undefined : { scale: alive ? 1 : [1.35, 1] }}
-              transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+              transition={tween(dur.base)}
               className={cn('text-base leading-none', alive ? 'text-hazard' : 'text-ink-dim')}
             >
               {alive ? quizCopy.run.marks.alive : quizCopy.run.marks.lost}
@@ -350,7 +351,7 @@ function QuestionCard({
       initial={reduceMotion ? false : { opacity: 0, x: 24 }}
       animate={{ opacity: 1, x: 0 }}
       exit={reduceMotion ? undefined : { opacity: 0, x: -24 }}
-      transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
+      transition={calm(reduceMotion, tween(dur.base))}
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-2">
@@ -412,7 +413,7 @@ function VerdictCard({
       initial={reduceMotion ? false : { opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       exit={reduceMotion ? undefined : { opacity: 0, y: -14 }}
-      transition={{ duration: reduceMotion ? 0 : 0.26, ease: [0.16, 1, 0.3, 1] }}
+      transition={calm(reduceMotion, tween(dur.base))}
       className="flex flex-col gap-4"
     >
       <div className="flex items-center justify-between gap-3">
@@ -428,7 +429,7 @@ function VerdictCard({
           <motion.span
             initial={reduceMotion ? false : { opacity: 0, y: -12, scale: 1.25 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: 'spring', stiffness: 520, damping: 20 }}
+            transition={spring.mark}
             className="font-display text-lead font-semibold leading-none text-alarm"
           >
             {quizCopy.verdict.cost}
@@ -624,11 +625,10 @@ function Doors({ children }: { children: ReactNode }) {
           )}
           initial={reduceMotion ? false : { x: 0 }}
           animate={{ x: `${dir * 101}%` }}
-          transition={{
-            duration: reduceMotion ? 0 : 0.9,
-            delay: reduceMotion ? 0 : 0.25,
-            ease: [0.16, 1, 0.3, 1],
-          }}
+          // Створки не появляются и не исчезают — они РАЗЪЕЗЖАЮТСЯ, и у такого
+          // движения есть разгон и торможение. Задержка держит паузу перед
+          // открытием: человек успевает увидеть дверь ещё закрытой.
+          transition={calm(reduceMotion, { ...tween(dur.epic, ease.inOut), delay: 0.25 })}
         >
           {/* Шов, по которому дверь была запечатана. */}
           <span

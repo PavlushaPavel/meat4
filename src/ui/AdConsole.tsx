@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { calm, dur, tween } from '@/scene/motion';
 import { MetalPanel } from '@/ui/MetalPanel';
 import { Legend } from '@/ui/Plate';
 import { cn } from '@/lib/cn';
@@ -118,7 +119,7 @@ export function AdConsole({
             initial={reduceMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
-            transition={{ duration: reduceMotion ? 0 : 0.22, ease: [0.16, 1, 0.3, 1] }}
+            transition={calm(reduceMotion, tween(dur.quick))}
             className="pt-2.5"
           >
             <p className="font-display text-sm font-semibold uppercase tracking-wide text-ink">

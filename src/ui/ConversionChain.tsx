@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from 'motion/react';
-import type { StepKey } from '@/router/flow';
+import { prevStep, type StepKey } from '@/router/flow';
 import { CHAIN, ZONES, zoneState, type ZoneId, type ZoneState } from '@/world';
+import { dur, ease, spring, tween } from '@/scene/motion';
 import { Legend } from '@/ui/Plate';
 import { cn } from '@/lib/cn';
 
@@ -68,6 +69,42 @@ function isLit(from: ZoneId, to: ZoneId, step: StepKey): boolean {
   return zoneState(from, step) === 'open' && zoneState(to, step) === 'open';
 }
 
+/**
+ * Открылся ли участок ИМЕННО НА ЭТОМ ШАГЕ — то есть надо ли его зажигать.
+ *
+ * ЗАЧЕМ ЭТО НУЖНО. Зажигание — событие, а не состояние: оно случается за всю
+ * воронку максимум четыре раза. Но карта показывается на четырёх экранах
+ * подряд, и без этой проверки неон бил бы заново на каждом из них — событие
+ * превратилось бы в тик, а тик не читается как награда.
+ *
+ * ЗАЧЕМ ИМЕННО ТАК, А НЕ ФЛАГОМ. Флага «только что открылось» здесь быть не
+ * может ровно по той же причине, по какой нет флага «открыто» (docs/SPEC.md
+ * §1.3): его можно забыть поднять, и воронка молча соврёт. Поэтому вопрос
+ * задаётся тому же расписанию, только в двух его точках — на этом шаге и на
+ * предыдущем. Состояние по-прежнему считается функцией шага, а событие — это
+ * разница между двумя её значениями.
+ *
+ * На первом шаге маршрута предыдущего нет, и это не дыра: ТРАФИК был у
+ * человека всегда, он ничего не забирал — зажигать нечего.
+ */
+function justOpened(id: ZoneId, step: StepKey): boolean {
+  if (zoneState(id, step) !== 'open') return false;
+  const before = prevStep(step);
+  return before !== null && zoneState(id, before) !== 'open';
+}
+
+/**
+ * Перебой неоновой трубки. Словарь взят у вывески района (`PreframeScreen`,
+ * `DistrictScene`) слово в слово: удар, провал, ровный свет. Единственный приём
+ * зажигания на весь мир — в городе и в связке одно и то же явление, и говорить
+ * о нём двумя разными движениями значило бы, что это два разных мира.
+ *
+ * Вынесено в константы модуля, а не собирается в разметке: одинаковая ссылка
+ * на кадры не даёт motion переиграть анимацию при обычной перерисовке строки.
+ */
+const IGNITE = { opacity: [0, 1, 0.3, 1] };
+const IGNITE_TIMES = [0, 0.4, 0.6, 1];
+
 function ZoneRow({
   id,
   step,
@@ -93,9 +130,31 @@ function ZoneRow({
     open: 'neon-edge text-neon',
   };
 
+  /**
+   * Зажигать или просто гореть.
+   *
+   * При `prefers-reduced-motion` участок горит ровно с первого кадра: перебоя
+   * нет, но и порядок событий не съезжает — участок всё равно загорается
+   * только на своём шаге, а до него стоит серым (docs/SPEC.md §2.1).
+   */
+  const ignite = !reduceMotion && justOpened(id, step);
+
   return (
     <motion.div
       layout={!reduceMotion}
+      /*
+        Зажигается ВЕСЬ участок — неоновая рамка и имя, а не одна галочка.
+        Загорается физический объект: трубка бьёт с перебоем и только потом
+        встаёт ровно. Это переход в состояние `open`, а не пятое состояние
+        карты: через 0.9 с на экране ровно тот же неон, что и всегда.
+
+        `dur.epic` здесь не «подлиннее», а по списку: включение связки — один
+        из четырёх дорогих эпизодов продукта (DESIGN.md §7).
+      */
+      animate={ignite ? IGNITE : undefined}
+      transition={
+        ignite ? { ...tween(dur.epic, ease.out), times: IGNITE_TIMES } : undefined
+      }
       className={cn(
         'flex min-h-11 items-center justify-between gap-3 rounded-plate px-3 py-2',
         skin[state],
@@ -112,9 +171,12 @@ function ZoneRow({
       {state === 'open' && (
         <motion.span
           aria-label="участок собран"
-          initial={reduceMotion ? false : { scale: 0.4, opacity: 0 }}
+          // Галочка выскакивает только вместе с зажиганием — это одно событие
+          // в двух слоях. На следующих экранах она просто стоит: пружина на
+          // каждом входе в карту была бы тем же тиком, что и повторный неон.
+          initial={ignite ? { scale: 0.4, opacity: 0 } : false}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 480, damping: 22 }}
+          transition={spring.mark}
           className="shrink-0 text-neon"
         >
           ✓

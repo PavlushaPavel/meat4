@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { sceneUi } from '@/content/scene';
+import { calm, dur, tween } from '@/scene/motion';
 import { Screen } from '@/ui/CityStage';
 import { Button } from '@/ui/Button';
 import { Legend } from '@/ui/Plate';
@@ -20,6 +21,37 @@ import type { BeatRun } from './useBeats';
  * единственный способ ускориться, кроме «пропустить». Отдельного «дальше» на
  * каждую мысль здесь нет и быть не должно (docs/SPEC.md §2.1).
  */
+/**
+ * Насколько сцена приседает под пальцем.
+ *
+ * ЗАЧЕМ ВООБЩЕ. Тап по сцене — главный жест воронки, ему специально учит
+ * подсказка, и до сих пор на него отвечала одна вибрация. Вне Telegram её нет
+ * совсем (DESIGN.md §9), а внутри — нет уверенности, что человек её ощутит: на
+ * экране не происходило ничего. Следующая реплика не считается ответом, она
+ * приходит своим появлением на 300 мс позже и читается как «сцена пошла
+ * дальше», а не как «нажатие принято»; на последнем такте лог вообще не
+ * меняется, тап только доигрывает сцену.
+ *
+ * ПОЧЕМУ ПРИСЕДАЕТ ВЕСЬ БЛОК СЦЕНЫ. Кнопка здесь — сама сцена целиком, и
+ * отвечать обязан ровно тот объект, который нажали. Вспышка на полосе речи
+ * случилась бы в стороне от пальца и читалась бы как событие мира, а не как
+ * ответ на прикосновение; приседание одной реплики сообщало бы, что нажали
+ * реплику, — а нажали не её, и в момент, когда лога ещё нет, отвечать было бы
+ * нечему.
+ *
+ * ПОЧЕМУ 0.994, А НЕ 0.99. Приседает экран целиком, а не кнопка размером с
+ * палец: те же проценты дают здесь ход в разы больше по абсолютной величине.
+ * Заметное приседание всего экрана выглядит дёшево и укачивает; 0.6% — это
+ * несколько пикселей по верхнему краю, ровно на грани осознания, и это верная
+ * граница для подтверждения, которое не должно перебивать рассказ.
+ *
+ * ТОЧКА ОПОРЫ — НИЗ. Текущая реплика лежит у нижнего края блока и в этот момент
+ * её читают. При опоре в центре строка уезжала бы вверх на пару пикселей прямо
+ * под взглядом; при опоре в низ она остаётся на месте, а отходит город.
+ * Трансформация вёрстку не двигает, поэтому сдвига не будет и у соседей.
+ */
+const PRESS_SCALE = 0.994;
+
 export function SceneShell<Cue extends string>({
   run,
   total,
@@ -53,16 +85,26 @@ export function SceneShell<Cue extends string>({
 
   return (
     <Screen className={cn('min-h-dvh justify-between gap-5', className)}>
-      <button
+      <motion.button
         type="button"
         onClick={done ? undefined : tap}
         aria-label={done ? undefined : sceneUi.tapAria}
         aria-disabled={done}
+        /**
+         * Отклик на нажатие. `whileTap`, а не реакция на `onClick`: ответ обязан
+         * прийти на прижатый палец, до того как жест вообще закончится, — иначе
+         * это уже не подтверждение, а последствие.
+         */
+        whileTap={done || reduceMotion ? undefined : { scale: PRESS_SCALE }}
+        transition={calm(reduceMotion, tween(dur.press))}
+        // Точка опоры — нижний край: см. PRESS_SCALE, реплика под пальцем не
+        // должна ездить, пока её читают.
+        style={{ transformOrigin: 'bottom' }}
         className="flex flex-1 cursor-default flex-col gap-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-neon/60"
       >
         <div className="relative min-h-[38dvh] shrink-0">{stage}</div>
         <BeatLog said={said} />
-      </button>
+      </motion.button>
 
       <footer className="flex shrink-0 flex-col gap-3">
         <TapHint visible={!done && index < HINT_BEATS} />
@@ -73,7 +115,7 @@ export function SceneShell<Cue extends string>({
               key="cta"
               initial={reduceMotion ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: reduceMotion ? 0 : 0.32, ease: [0.16, 1, 0.3, 1] }}
+              transition={calm(reduceMotion, tween(dur.base))}
             >
               <Button variant="hazard" onClick={onCta} arrow>
                 {cta}
@@ -114,7 +156,7 @@ function BeatLog<Cue extends string>({ said }: { said: readonly Beat<Cue>[] }) {
           key={beat.id}
           initial={reduceMotion ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: reduceMotion ? 0 : 0.3, ease: [0.16, 1, 0.3, 1] }}
+          transition={calm(reduceMotion, tween(dur.base))}
           className={cn(
             'flex flex-col gap-2 transition-opacity duration-500',
             i === last ? 'opacity-100' : 'opacity-40',
@@ -171,7 +213,7 @@ function TapHint({ visible }: { visible: boolean }) {
           initial={reduceMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: reduceMotion ? 0 : 0.4 }}
+          transition={calm(reduceMotion, tween(dur.screen))}
           className="flex items-center gap-2 self-center"
         >
           <motion.span
@@ -197,7 +239,10 @@ function SceneProgress({
   total: number;
   done: boolean;
 }) {
+  const reduceMotion = useReducedMotion();
   const ratio = done ? 1 : Math.min(1, index / total);
+  const shown = Math.round(ratio * total);
+
   return (
     <div className="flex items-center gap-3">
       <div className="h-px flex-1 bg-line">
@@ -206,11 +251,28 @@ function SceneProgress({
           animate={{ scaleX: ratio }}
           initial={false}
           style={{ transformOrigin: 'left' }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          // Единственный `motion.*` во всём проекте, где гейта не было: полоса
+          // ползла и у того, кто просил экран не двигать. Значение при
+          // `calm()` доезжает мгновенно — состояние верное, движения нет.
+          transition={calm(reduceMotion, tween(dur.screen))}
         />
       </div>
       <Legend tone="dim">
-        {String(Math.round(ratio * total)).padStart(2, '0')} / {String(total).padStart(2, '0')}
+        {/**
+         * Число не подменяется, а щёлкает: приборные цифры — язык, на котором
+         * говорит весь остальной интерфейс, и смена скачком тут выпадает из
+         * него. Анимация лежит в `.level-tick` (globals.css), здесь только её
+         * перезапуск: CSS-анимация не играет заново на том же узле, поэтому при
+         * смене числа меняется `key` и React монтирует новый span. Свой гейт
+         * reduced-motion у класса есть — он в том же файле.
+         *
+         * Тикает только левое число: правое — общий размер сцены, он не меняется
+         * никогда, и мигать ему не с чего.
+         */}
+        <span key={shown} className="level-tick inline-block">
+          {String(shown).padStart(2, '0')}
+        </span>{' '}
+        / {String(total).padStart(2, '0')}
       </Legend>
     </div>
   );

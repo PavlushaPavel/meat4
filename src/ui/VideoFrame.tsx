@@ -1,4 +1,5 @@
 import { motion, useReducedMotion } from 'motion/react';
+import { calm } from '@/scene/motion';
 import { env, type VideoEnvVar } from '@/lib/env';
 import { cn } from '@/lib/cn';
 
@@ -93,26 +94,44 @@ export function VideoFrame({
           всём экране обучения. Она говорит «монитор включён, сигнала нет».
           При `prefers-reduced-motion` полоса не бегает, а стоит: убрать её
           совсем нельзя, иначе состояние потеряет часть смысла.
+
+          ЕДЕТ `translateY`, А НЕ `top`. Это самое долгое движение во всём
+          продукте: экран главы человек держит открытым двадцать минут, и
+          анимация раскладочного свойства всё это время заставляла бы браузер
+          пересчитывать геометрию и перерисовывать кадр непрерывно. Трансформа
+          раскладку не трогает и уходит на композитор.
+
+          ОТСЮДА ДВА ЭЛЕМЕНТА ВМЕСТО ОДНОГО, и это не украшение: проценты в
+          `translateY` считаются от СОБСТВЕННОЙ высоты элемента, а прежние
+          проценты в `top` — от высоты кадра. Поэтому едет носитель во весь
+          кадр (`inset-0`), а полоса в 4rem сидит внутри него сверху: её
+          верхний край проходит те же -18% → 104% высоты кадра, что и раньше.
         */}
         <motion.div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 h-16"
-          style={{
-            background: `linear-gradient(
-              180deg,
-              transparent,
-              color-mix(in oklab, var(--color-ink) 6%, transparent),
-              transparent
-            )`,
-          }}
-          initial={{ top: '-18%' }}
-          animate={reduceMotion ? { top: '42%' } : { top: ['-18%', '104%'] }}
-          transition={
-            reduceMotion
-              ? { duration: 0 }
-              : { duration: 7.5, ease: 'linear', repeat: Infinity }
-          }
-        />
+          className="pointer-events-none absolute inset-0"
+          initial={{ y: '-18%' }}
+          animate={reduceMotion ? { y: '42%' } : { y: ['-18%', '104%'] }}
+          transition={calm(reduceMotion, {
+            duration: 7.5,
+            // `as const` обязателен: `calm` — обобщённая функция, и без него
+            // кривая уезжает в тип `string`, которого motion не принимает.
+            ease: 'linear' as const,
+            repeat: Infinity,
+          })}
+        >
+          <div
+            className="h-16 w-full"
+            style={{
+              background: `linear-gradient(
+                180deg,
+                transparent,
+                color-mix(in oklab, var(--color-ink) 6%, transparent),
+                transparent
+              )`,
+            }}
+          />
+        </motion.div>
 
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
           <p className="font-display text-lead uppercase leading-tight tracking-wide text-ink-dim">

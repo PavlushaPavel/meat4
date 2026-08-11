@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import type { PeopleBlock, SamplePerson } from '@/content/types';
+import { calm, dur, stagger, tween } from '@/scene/motion';
 import { cn } from '@/lib/cn';
 
 /**
@@ -98,11 +99,10 @@ function PersonCard({ person, index }: { person: SamplePerson; index: number }) 
       // «меньше движения» появление отменяется целиком, а не ускоряется.
       initial={reduceMotion ? false : { opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={
-        reduceMotion
-          ? { duration: 0 }
-          : { duration: 0.26, delay: index * 0.06, ease: [0.16, 1, 0.3, 1] }
-      }
+      transition={calm(reduceMotion, {
+        ...tween(dur.base),
+        delay: index * stagger.list,
+      })}
     >
       <div className="relative aspect-[4/3] w-full bg-paper-deep">
         {hasPhoto && (

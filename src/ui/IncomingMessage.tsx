@@ -1,4 +1,5 @@
 import { motion, useReducedMotion } from 'motion/react';
+import { calm, dur, spring, stagger, tween } from '@/scene/motion';
 import { cn } from '@/lib/cn';
 
 /**
@@ -51,16 +52,14 @@ export function IncomingMessage({
               x: [0, -7, 6, -4, 2, 0],
             }
       }
-      transition={
-        reduceMotion
-          ? { duration: 0 }
-          : {
-              y: { type: 'spring', stiffness: 520, damping: 26, mass: 0.7 },
-              scale: { type: 'spring', stiffness: 520, damping: 26 },
-              opacity: { duration: 0.16 },
-              x: { delay: 0.1, duration: 0.34, ease: 'easeOut' },
-            }
-      }
+      transition={calm(reduceMotion, {
+        y: spring.land,
+        scale: spring.land,
+        opacity: tween(dur.press),
+        // Тряска ждёт приземления и гаснет сама: у затухающих толчков своё
+        // мягкое торможение, а не общая кривая появления.
+        x: { delay: 0.1, duration: dur.base, ease: 'easeOut' as const },
+      })}
       className={cn(
         // Это уведомление ОС, а не элемент мира: своя тёмная плашка мессенджера,
         // без неона, металла и жёлтой ленты.
@@ -104,7 +103,7 @@ function TypingDots({ label, reduceMotion }: { label: string; reduceMotion: bool
             transition={
               reduceMotion
                 ? undefined
-                : { duration: 1, repeat: Infinity, delay: i * 0.16, ease: 'easeInOut' }
+                : { duration: 1, repeat: Infinity, delay: i * stagger.reveal, ease: 'easeInOut' }
             }
           />
         ))}

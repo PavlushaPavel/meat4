@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { nextStep, type ActId, type StepKey } from '@/router/flow';
+import { calm, dur, spring, tween } from '@/scene/motion';
 import { cn } from '@/lib/cn';
 import { worldAsset } from './assets';
 
@@ -74,15 +75,15 @@ const ENTER_MOTION: Record<
   Enter,
   { initial: Record<string, number>; transition: Record<string, unknown> }
 > = {
-  default: { initial: { opacity: 0, y: 10 }, transition: { duration: 0.24, ease: [0.16, 1, 0.3, 1] } },
-  rise: { initial: { opacity: 0, y: 26 }, transition: { duration: 0.38, ease: [0.16, 1, 0.3, 1] } },
+  default: { initial: { opacity: 0, y: 10 }, transition: tween(dur.quick) },
+  rise: { initial: { opacity: 0, y: 26 }, transition: tween(dur.screen) },
   pullback: {
     initial: { opacity: 0, scale: 1.05 },
-    transition: { duration: 0.46, ease: [0.16, 1, 0.3, 1] },
+    transition: tween(dur.screen),
   },
   slam: {
     initial: { opacity: 0, scale: 0.94 },
-    transition: { type: 'spring', stiffness: 460, damping: 24, mass: 0.7 },
+    transition: spring.land,
   },
   none: { initial: { opacity: 1 }, transition: { duration: 0 } },
 };
@@ -125,8 +126,15 @@ export function CityStage({
       data-act={act}
       data-step={step}
       data-scene={art?.file.replace('.webp', '')}
+      // Переход держит ТОЛЬКО заливку сцены. `transition-colors` объявлял
+      // переходом ещё и цвет текста, границ и обводок — на корне, от которого
+      // наследуется всё дерево, это самая широкая формулировка из возможных, и
+      // при смене акта браузер получал длинный список анимируемых свойств там,
+      // где меняется одна заливка. Палитра акта живёт в `data-act`
+      // (src/styles/tokens.css), и остальным цветам этот переход не нужен:
+      // текст и рамки меняются вместе с фоном, но не обязаны ехать 700 мс.
       className={cn(
-        'relative min-h-dvh bg-scene text-ink transition-colors duration-700',
+        'relative min-h-dvh bg-scene text-ink transition-[background-color] duration-700',
         className,
       )}
       style={{ transitionTimingFunction: 'var(--ease-town)' }}
@@ -144,7 +152,7 @@ export function CityStage({
             initial={reduceMotion ? false : { opacity: 0, scale: 1.025 }}
             animate={{ opacity: art.opacity, scale: 1.015 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.46, ease: [0.16, 1, 0.3, 1] }}
+            transition={calm(reduceMotion, tween(dur.screen))}
             aria-hidden="true"
           />
         )}
@@ -153,15 +161,31 @@ export function CityStage({
       <div className="stage-light" aria-hidden="true" />
       <div className="stage-grain" aria-hidden="true" />
       <div className="stage-vignette" aria-hidden="true" />
-      <motion.main
-        key={step}
-        className="relative z-10"
-        initial={reduceMotion ? false : enter.initial}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={reduceMotion ? { duration: 0 } : enter.transition}
-      >
-        {children}
-      </motion.main>
+      {/*
+        `mode="wait"` — потому что экраны здесь стоят в потоке, а не наложены
+        друг на друга: без него уходящий и приезжающий на 160 мс образуют
+        колонку двойной высоты, и главное действие уезжает вниз ровно в момент
+        перехода. Плата за это — те же 160 мс до появления нового экрана, и она
+        допустима только потому, что выход короткий: будь он длиной входа,
+        воронка ощущалась бы как задумчивая.
+      */}
+      <AnimatePresence mode="wait">
+        <motion.main
+          key={step}
+          className="relative z-10"
+          initial={reduceMotion ? false : enter.initial}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          // ВЫХОД КОРОЧЕ ВХОДА, И ЭТО ПРАВИЛО, А НЕ ВКУС. Экран уходит, потому
+          // что человек уже нажал и решение принято: всё, что дольше отклика на
+          // нажатие, читается как задержка системы. Отсюда `dur.press` — та же
+          // длительность, которой отвечает кнопка, — и голая прозрачность без
+          // сдвига: уходящий экран не должен спорить с приезжающим за движение.
+          exit={reduceMotion ? undefined : { opacity: 0, transition: tween(dur.press) }}
+          transition={calm(reduceMotion, enter.transition)}
+        >
+          {children}
+        </motion.main>
+      </AnimatePresence>
     </div>
   );
 }

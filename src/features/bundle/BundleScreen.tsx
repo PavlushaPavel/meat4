@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { bundleFinale } from '@/content/city';
 import { externalUrl } from '@/lib/env';
 import { useNav } from '@/router/useNav';
+import { calm, dur, stagger, tween } from '@/scene/motion';
 import { useFunnel } from '@/store/funnel';
 import { AuthorLine, AuthorNote } from '@/ui/AuthorNote';
 import { Button } from '@/ui/Button';
@@ -85,7 +86,7 @@ export function BundleScreen() {
             className="flex flex-col gap-7"
             initial={reduceMotion ? false : { opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.4, ease: [0.16, 1, 0.3, 1] }}
+            transition={calm(reduceMotion, tween(dur.screen))}
           >
             <AuthorNote>
               {bundleFinale.final.map((line) => (
@@ -108,7 +109,7 @@ export function BundleScreen() {
             initial={reduceMotion ? false : { opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
-            transition={{ duration: reduceMotion ? 0 : 0.4, ease: [0.16, 1, 0.3, 1] }}
+            transition={calm(reduceMotion, tween(dur.screen))}
           >
             <AuthorNote>
               <AuthorLine>{bundleFinale.invite}</AuthorLine>
@@ -235,11 +236,10 @@ function Domino() {
             key={text}
             initial={reduceMotion ? false : { opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{
-              delay: reduceMotion ? 0 : i * 0.07,
-              duration: reduceMotion ? 0 : 0.3,
-              ease: [0.16, 1, 0.3, 1],
-            }}
+            transition={calm(reduceMotion, {
+              ...tween(dur.base),
+              delay: i * stagger.list,
+            })}
             className="flex gap-3 border-l border-line pl-3"
           >
             <span className="legend shrink-0 pt-0.5 text-neon">
