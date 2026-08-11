@@ -7,6 +7,7 @@ import { Blocks } from '@/ui/Blocks';
 import { Button } from '@/ui/Button';
 import { ChapterRail } from '@/ui/ChapterRail';
 import { Screen } from '@/ui/CityStage';
+import { PeopleRow } from '@/ui/PeopleRow';
 import { VideoFrame } from '@/ui/VideoFrame';
 
 /**
@@ -142,6 +143,15 @@ export function LessonScreen({
                 <p className="legend mb-1 text-paper-ink-dim">{LESSON_UI.aiMark}</p>
               )}
               <Blocks blocks={sectionBlocks(section.title, section.items)} />
+
+              {/*
+                Портреты есть ровно у одного раздела воронки — «Федя и
+                реновация», и стоят они ПОСЛЕ пунктов: сначала человек читает
+                разбор, потом видит лица, которые этот разбор не различает.
+                Поставить ленту до текста значит показать пятерых незнакомцев
+                раньше, чем объяснить, зачем на них смотреть.
+              */}
+              {section.people && <PeopleRow block={section.people} />}
             </section>
           ))}
         </div>
