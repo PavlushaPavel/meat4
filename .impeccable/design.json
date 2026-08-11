@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-07T00:00:00Z",
+  "title": "Design System: Синтез партии",
+  "extensions": {
+    "colorMeta": {
+      "stage1-scene": {
+        "role": "neutral",
+        "displayName": "Этап 1 — БРАК, цех аварийного света",
+        "canonical": "#161412",
+        "tonalRamp": ["#050403", "#0b0906", "#12100d", "#161412", "#25211b", "#3d372c", "#5c5445", "#847a65"]
+      },
+      "stage1-accent": {
+        "role": "primary",
+        "displayName": "Этап 1 — инертный серый (прибора ещё нет)",
+        "canonical": "#857f72",
+        "tonalRamp": ["#211f1b", "#302d27", "#453f37", "#5b5449", "#6f665a", "#857f72", "#a49c8d", "#c4bcae"]
+      },
+      "stage1-danger": {
+        "role": "secondary",
+        "displayName": "Этап 1 — маячок аварийного жёлтого",
+        "canonical": "#f2c230",
+        "tonalRamp": ["#3d2e04", "#5c4606", "#85650a", "#b3880f", "#d3a51c", "#f2c230", "#f6d573", "#fae9b8"]
+      },
+      "stage2-scene": {
+        "role": "neutral",
+        "displayName": "Этап 2 — ДИАГНОСТИКА, панель без показаний",
+        "canonical": "#14181c",
+        "tonalRamp": ["#040506", "#080a0c", "#0e1114", "#14181c", "#22282e", "#394349", "#576369", "#7f8b90"]
+      },
+      "stage2-accent": {
+        "role": "primary",
+        "displayName": "Этап 2 — дежурный холодный тон панели",
+        "canonical": "#63808e",
+        "tonalRamp": ["#182024", "#232e33", "#324047", "#455760", "#546b75", "#63808e", "#8ba3ae", "#b6c7cf"]
+      },
+      "stage3-scene": {
+        "role": "neutral",
+        "displayName": "Этап 3 — СЫРЬЁ, первый прибор ожил",
+        "canonical": "#0f1720",
+        "tonalRamp": ["#030507", "#06090c", "#0a1017", "#0f1720", "#182530", "#283a47", "#3f5262", "#5f7789"]
+      },
+      "stage3-accent": {
+        "role": "primary",
+        "displayName": "Этап 3 — синий продукта, первое появление",
+        "canonical": "#3383bc",
+        "tonalRamp": ["#0d2030", "#123049", "#194367", "#215a86", "#2870a2", "#3383bc", "#63a4d1", "#9ac4e2"]
+      },
+      "stage4-scene": {
+        "role": "neutral",
+        "displayName": "Этап 4 — РЕАКЦИЯ, свет изнутри вещества",
+        "canonical": "#0b1620",
+        "tonalRamp": ["#020509", "#050a0f", "#081019", "#0b1620", "#132433", "#213a4c", "#375568", "#557388"]
+      },
+      "stage4-accent": {
+        "role": "primary",
+        "displayName": "Этап 4 — синий ярче и чище",
+        "canonical": "#3fa4e0",
+        "tonalRamp": ["#0e2a3e", "#123d59", "#175577", "#1f6f97", "#2b8ab8", "#3fa4e0", "#72bfea", "#a6d9f2"]
+      },
+      "stage5-scene": {
+        "role": "neutral",
+        "displayName": "Этап 5 — КОНТРОЛЬ, конус лампы под давлением",
+        "canonical": "#0a0c0e",
+        "tonalRamp": ["#020304", "#050607", "#08090b", "#0a0c0e", "#191b1d", "#2e3134", "#4b4f53", "#727679"]
+      },
+      "stage5-accent": {
+        "role": "primary",
+        "displayName": "Этап 5 — синий продукта не темнеет при провале",
+        "canonical": "#4fb6f0",
+        "tonalRamp": ["#0e3247", "#134666", "#1a6088", "#227cae", "#2f97d0", "#4fb6f0", "#7fcaf5", "#b2e0f9"]
+      },
+      "stage5-danger": {
+        "role": "secondary",
+        "displayName": "Этап 5 — самый яркий жёлтый, проба под давлением",
+        "canonical": "#ffcf33",
+        "tonalRamp": ["#3f3105", "#5f4a08", "#8a6c0d", "#b99312", "#dcb61f", "#ffcf33", "#ffdd6e", "#ffedb0"]
+      },
+      "stage6-scene": {
+        "role": "neutral",
+        "displayName": "Этап 6 — ЧИСТЫЙ ПРОДУКТ, свет ровный и свой",
+        "canonical": "#0a141c",
+        "tonalRamp": ["#020507", "#04090d", "#071019", "#0a141c", "#12222e", "#1e3949", "#33586a", "#517d8f"]
+      },
+      "stage6-accent": {
+        "role": "primary",
+        "displayName": "Этап 6 — самый яркий и насыщенный акцент во всём мире",
+        "canonical": "#57c2ff",
+        "tonalRamp": ["#0f3550", "#144a71", "#1a6497", "#2280bf", "#309fe0", "#57c2ff", "#87d3ff", "#b8e6ff"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Текст поверх сцены (значение этапа 1)",
+        "canonical": "#ece7da",
+        "tonalRamp": ["#39362d", "#514c40", "#726b5a", "#948c76", "#b7ad93", "#ece7da", "#f3f0e7", "#f9f7f2"]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Бумага этапа (значение этапа 1)",
+        "canonical": "#eee7d3",
+        "tonalRamp": ["#3d3520", "#584c2d", "#7b6c40", "#a08d56", "#c4ac6f", "#eee7d3", "#f3eedf", "#f9f6ee"]
+      },
+      "paper-ink": {
+        "role": "neutral",
+        "displayName": "Текст на бумаге (значение этапа 1)",
+        "canonical": "#1a1610",
+        "tonalRamp": ["#050403", "#0a0806", "#100d09", "#1a1610", "#2d2519", "#4a3e29", "#736044", "#a48d69"]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Граница/разделитель (значение этапа 1)",
+        "canonical": "#3a352c",
+        "tonalRamp": ["#0f0d0b", "#161310", "#211d18", "#3a352c", "#544c3f", "#766c58", "#a3977c", "#c9beaa"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display / Oswald Variable", "purpose": "Короткие приборные строки: номер и название этапа на карточке стадии, заголовки лонгридов, текст кнопок, цена оффера." },
+      "body": { "displayName": "Body / PT Serif", "purpose": "Всё длинное чтение на бумаге этапа — засечка читается как протокол/лабораторный журнал." },
+      "legend": { "displayName": "Legend / JetBrains Mono Variable", "purpose": "Показания приборов (чистота, пробы), номера этапов, статусы — набраны как ЖК-панель, табличные цифры." }
+    },
+    "shadows": [
+      { "name": "shadow-card", "value": "3px 3px 0 0 rgb(0 0 0 / 0.4)", "purpose": "Базовый офсетный подъём кнопки/карточки над сценой, без размытия." },
+      { "name": "shadow-lift", "value": "5px 5px 0 0 rgb(0 0 0 / 0.45)", "purpose": "Более сильный подъём для крупных поверхностей." },
+      { "name": "shadow-glow-accent", "value": "0 0 0 1px var(--color-accent), 0 0 14px 0 color-mix(in oklab, var(--color-accent) 55%, transparent)", "purpose": "Фокус, активное состояние прибора, рамка цены на оффере — акцентом текущего этапа." },
+      { "name": "shadow-glow-danger", "value": "0 0 0 1px var(--color-danger), 0 0 14px 0 color-mix(in oklab, var(--color-danger) 55%, transparent)", "purpose": "Опасность/потеря пробы на контроле, danger текущего этапа." }
+    ],
+    "motion": [
+      { "name": "ease-snap", "value": "cubic-bezier(0.2, 0, 0, 1)", "purpose": "Реакция на тап — резкая остановка, не пружина." },
+      { "name": "ease-scene", "value": "cubic-bezier(0.65, 0, 0.35, 1)", "purpose": "Переход между этапами и экранами — ровный ход." },
+      { "name": "ease-ambient", "value": "cubic-bezier(0.45, 0, 0.55, 1)", "purpose": "Фоновые петли материала: дребезг маячка, скан панели, дыхание реакции." },
+      { "name": "duration-snap", "value": "150ms", "purpose": "Мгновенная реакция: тап, переключение состояния." },
+      { "name": "duration-scene", "value": "550ms", "purpose": "Переход между этапами — смена всей сцены." },
+      { "name": "duration-ambient", "value": "3200ms", "purpose": "Фоновые петли: дребезг маячка, скан, дыхание." },
+      { "name": "duration-purity", "value": "900ms", "purpose": "Набегание цифр показателя чистоты — JS-таймер, не CSS-transition." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Кнопка — Primary",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Основное действие экрана: жёсткий прямоугольник, впечатывается в поверхность по тапу.",
+      "html": "<button class=\"ds-btn-primary\"><span>Знакомая ситуация?</span><svg class=\"ds-advance\" viewBox=\"0 0 10 16\" aria-hidden=\"true\"><path d=\"M1.5 1L8.5 8L1.5 15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"square\" stroke-linejoin=\"miter\"/></svg></button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: space-between; gap: 1rem; border-radius: 3px; padding: 14px 20px; text-align: left; font-family: 'Oswald Variable', sans-serif; font-size: 1rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.02em; background: #3383bc; color: #06121a; border: 1px solid #233544; box-shadow: 3px 3px 0 0 rgb(0 0 0 / 0.4); transition: transform 0.15s cubic-bezier(0.2,0,0,1), box-shadow 0.15s; cursor: pointer; } .ds-btn-primary:hover { filter: brightness(1.06); } .ds-btn-primary:active { transform: translate(3px, 3px); box-shadow: none; } .ds-btn-primary:focus-visible { outline: 2px solid #3383bc; outline-offset: 2px; } .ds-advance { height: 1rem; width: 0.625rem; flex-shrink: 0; opacity: 0.8; }"
+    },
+    {
+      "name": "Кнопка — Disabled",
+      "kind": "button",
+      "refersTo": "button-disabled",
+      "description": "Честно неактивная кнопка (например, пустой слот видео или ссылка без переменной сборки): пунктирная рамка, без заливки — форма меняется, не только прозрачность.",
+      "html": "<button class=\"ds-btn-disabled\" disabled><span>Ссылка появится здесь</span><svg class=\"ds-advance\" viewBox=\"0 0 10 16\" aria-hidden=\"true\"><path d=\"M1.5 1L8.5 8L1.5 15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"square\" stroke-linejoin=\"miter\"/></svg></button>",
+      "css": ".ds-btn-disabled { display: inline-flex; align-items: center; justify-content: space-between; gap: 1rem; border-radius: 3px; padding: 14px 20px; text-align: left; font-family: 'Oswald Variable', sans-serif; font-size: 1rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.02em; background: transparent; color: #7f97a6; border: 1px dashed #233544; opacity: 0.7; cursor: not-allowed; pointer-events: none; } .ds-advance { height: 1rem; width: 0.625rem; flex-shrink: 0; opacity: 0.8; }"
+    },
+    {
+      "name": "Surface — Paper (бумага этапа)",
+      "kind": "card",
+      "refersTo": "surface-paper",
+      "description": "Дом длинного чтения: своя бумага у каждого этапа, честный контраст внутри грейда, зерно как материал.",
+      "html": "<article class=\"ds-surface-paper\"><p class=\"ds-lead\">Ты вроде всё сделал нормально.</p><p>Заявки идут, бюджет крутится, а продаж всё равно нет.</p></article>",
+      "css": ".ds-surface-paper { background-color: #eee7d3; color: #1a1610; border-radius: 3px; border: 1px solid #3a352c; box-shadow: 3px 3px 0 0 rgb(0 0 0 / 0.4); padding: 24px 20px; max-width: 65ch; font-family: 'PT Serif', serif; font-size: 1rem; line-height: 1.6; } .ds-lead { font-family: 'Oswald Variable', sans-serif; font-size: 1.625rem; line-height: 1.08; margin: 0 0 0.75rem; }"
+    },
+    {
+      "name": "Показатель чистоты (PurityMeter)",
+      "kind": "custom",
+      "refersTo": "n/a",
+      "description": "Единственный индикатор прогресса воронки: живое приборное показание, набегает цифрами, шкала доходит до той же доли. Никогда не подставляется мгновенно.",
+      "html": "<div class=\"ds-purity\"><div class=\"ds-purity-row\"><span class=\"ds-purity-label\">Чистота</span><span class=\"ds-purity-value\">21.4<span class=\"ds-purity-pct\">%</span></span></div><div class=\"ds-purity-track\"><div class=\"ds-purity-fill\" style=\"width:21.4%\"></div></div></div>",
+      "css": ".ds-purity { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; font-variant-numeric: tabular-nums; } .ds-purity-row { display: flex; align-items: baseline; gap: 0.5rem; font-family: 'JetBrains Mono Variable', monospace; line-height: 1; } .ds-purity-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.16em; color: #7f97a6; } .ds-purity-value { font-size: 1.125rem; color: #dbe9f2; } .ds-purity-pct { color: #7f97a6; } .ds-purity-track { position: relative; height: 4px; width: 100%; overflow: hidden; border-radius: 1px; border: 1px solid #233544; background: rgba(7,12,17,0.6); } .ds-purity-fill { position: absolute; inset: 0 auto 0 0; background: #3383bc; transition: width 0.9s cubic-bezier(0.65,0,0.35,1); }"
+    },
+    {
+      "name": "Проба под прибором (ProbeGauge)",
+      "kind": "custom",
+      "refersTo": "n/a",
+      "description": "Эталон правила «прибор важнее украшения»: легенда, табличное показание NN/MAX, полоса делений, набегающая делением за делением.",
+      "html": "<div class=\"ds-probe\"><div class=\"ds-probe-row\"><span>причина</span><span class=\"ds-probe-value\">04<span class=\"ds-probe-max\">/06</span></span></div><div class=\"ds-probe-track\"><span class=\"ds-probe-div on\"></span><span class=\"ds-probe-div on\"></span><span class=\"ds-probe-div on\"></span><span class=\"ds-probe-div on\"></span><span class=\"ds-probe-div\"></span><span class=\"ds-probe-div\"></span></div></div>",
+      "css": ".ds-probe { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; font-family: 'JetBrains Mono Variable', monospace; } .ds-probe-row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #5c5340; } .ds-probe-value { font-variant-numeric: tabular-nums; color: #1a1610; } .ds-probe-max { color: #5c5340; } .ds-probe-track { display: flex; gap: 2px; } .ds-probe-div { height: 6px; flex: 1; border-radius: 1px; background: rgba(92,83,64,0.2); } .ds-probe-div.on { background: #3383bc; }"
+    },
+    {
+      "name": "Жёлтая опасная разметка (HazardTape)",
+      "kind": "custom",
+      "refersTo": "n/a",
+      "description": "Диагональные чёрно-жёлтые полосы. Единственный источник правды на то, где она видна — isHazardStage: только этап 1 (брак) и этап 5 (провал контроля). Больше нигде.",
+      "html": "<div class=\"ds-hazard\" aria-hidden=\"true\"></div>",
+      "css": ".ds-hazard { height: 12px; width: 100%; border-top: 1px solid #171208; border-bottom: 1px solid #171208; background-image: repeating-linear-gradient(135deg, #f2c230 0 10px, #171208 10px 20px); animation: ds-hazard-pulse 2.2s cubic-bezier(0.45,0,0.55,1) infinite; } @keyframes ds-hazard-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.62; } }"
+    },
+    {
+      "name": "Кристалл (Crystal, продукт)",
+      "kind": "custom",
+      "refersTo": "n/a",
+      "description": "Материальная форма синтезируемой партии. Растёт гранями и светлеет от этапа к этапу, никогда не уменьшается. Снимок этапа 4 «Реакция».",
+      "html": "<svg class=\"ds-crystal\" viewBox=\"0 0 100 100\" aria-hidden=\"true\"><path d=\"M 50,4 L 78,22 L 90,54 L 68,92 L 32,92 L 10,54 L 22,22 Z\" fill=\"#2f8fc4\" fill-opacity=\"0.55\" stroke=\"#5fc0ec\" stroke-width=\"2\" stroke-linejoin=\"round\"/><path d=\"M 46,40 L 50,4\" stroke=\"#5fc0ec\" stroke-opacity=\"0.55\" stroke-width=\"1\"/><path d=\"M 46,40 L 78,22\" stroke=\"#5fc0ec\" stroke-opacity=\"0.55\" stroke-width=\"1\"/><path d=\"M 46,40 L 90,54\" stroke=\"#5fc0ec\" stroke-opacity=\"0.55\" stroke-width=\"1\"/></svg>",
+      "css": ".ds-crystal { height: 2.5rem; width: 2.5rem; overflow: visible; transform: scale(0.78); transition: transform 0.55s cubic-bezier(0.65,0,0.35,1), opacity 0.55s cubic-bezier(0.65,0,0.35,1); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Синтез партии",
+    "overview": "Мир задан заказчиком напрямую и по пунктам, референс «Во все тяжкие», взятый не как палитра, а как принцип: «больше лаборатории и при этом с налётом ИИ». Тезис прибит гвоздями в docs/SPEC.md §1: воронка — не главы обучения, а синтез партии. Человек не проходит уроки, он варит связку — сырьё (кого приводим) → реакция (что обещаем) → чистый продукт (куда приводим). Лаборатория здесь буквальный смысл происходящего, а не декорация, и приборы в ней ИИ-шные — сам ИИ и есть новый инструмент, о котором говорит воронка.\n\nЭто ТРЕТИЙ визуальный мир проекта. Первый — «Сад обратной гравитации» (капли, чёрный цветок) — отвергнут как «слишком мягко и поэтично», «абстрактно». Второй — «Шесть актов» (кинематографические цветовые грейды «Во все тяжкие», data-act) — был признан рабочим по структуре, но заказчик забраковал его как «максимально не узнаваемо относительно „Во все тяжкие“». Текущий мир решает именно это: заменяет киноцвет предметным приборным языком, сохраняя механику «один атрибут переключает всю сцену».\n\nМир держится на том же принципе переключателя, что и прошлый: один атрибут data-stage (stage1…stage6) на корне сцены (ActStage.tsx, имя сохранено по прямому указанию задачи). Каждый этап заново объявляет полный набор семантических цветовых переменных напрямую. Три приметы мира выбраны заказчиком из списка и только они: показатель чистоты, синий кристалл, жёлтая опасная разметка. Никакого другого лабораторного реквизита в мире нет.",
+    "keyCharacteristics": [
+      "Шесть этапов синтеза = шесть грейдов, переключаемых одним атрибутом data-stage; этап — состояние партии, а не тема оформления.",
+      "Показатель чистоты — единственный индикатор прогресса, живое приборное показание, набегает цифрами от 00.0% до 99.1%, никогда не подставляется мгновенно.",
+      "Синий кристалл растёт монотонно от этапа к этапу и никогда не уменьшается — провал контроля стоит пробы, а не продукта.",
+      "Жёлтая опасная разметка живёт только на этапах 1 и 5 (isHazardStage — единственный источник правды); больше нигде.",
+      "Всё, что показывает состояние, показывает его как прибор — шкала, показание, проба, маркировка, — не иконка и не символ.",
+      "Жёсткая, предметная форма без исключений: маленькие радиусы (1–6px), офсетные тени без блюра, «впечатывающиеся» по тапу кнопки.",
+      "Запрещённый реквизит закреплён прямым отказом заказчика: стеклянные колбы, клетки периодической таблицы, подвальные чаны, абстрактные метафоры и частицы."
+    ],
+    "rules": [
+      { "name": "Правило прибора важнее украшения", "body": "Всё, что показывает состояние партии — чистоту, пробу, готовность, опасность, — показывается как прибор: шкала, живое показание, деление, маркировка. Не иконка и не декоративный символ. Эталон грамматики — ProbeGauge.", "section": "colors" },
+      { "name": "Правило честности показаний", "body": "Показания приборов (чистота, показатели проб) — это состояние партии внутри метафоры синтеза, а не обещание рекламного результата клиенту. Их не ставят рядом с ценой и коммерческими утверждениями.", "section": "colors" },
+      { "name": "Правило одного уровня косвенности", "body": "Каждый [data-stage] объявляет семантические переменные напрямую, без промежуточного имени. Форма --color-scene: var(--stage-scene), объявленная один раз на :root, резолвится в месте объявления — все этапы вычислятся в значение первого объявленного, и это не ловится сборкой/тестами/линтом, только getComputedStyle на живом DOM. Закрыто тестом src/styles/tokens.test.tsx.", "section": "colors" },
+      { "name": "Правило жёлтой разметки только на этапах 1 и 5", "body": "Единственный источник правды — isHazardStage(stage) в src/acts.ts. Ни один компонент не держит свой список этапов заново.", "section": "colors" },
+      { "name": "Правило кириллицы во всех трёх", "body": "Все три гарнитуры обязаны иметь кириллический сабсет, проверенный вручную по файлам пакета — без него латинский шрифт молча подставит системный запасной.", "section": "typography" },
+      { "name": "Правило впечатанной кнопки", "body": "Активная кнопка объёмна (shadow-card, офсет 3px); по тапу содержимое сдвигается ровно на офсет тени, а тень гасится — кнопка впечатывается в поверхность, не пружинит.", "section": "elevation" },
+      { "name": "Правило честной неактивности формой", "body": "Неактивная кнопка — пунктирная рамка, прозрачная заливка; форма меняется, не только прозрачность.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do переключать весь грейд сцены одним атрибутом data-stage на ActStage — каждый этап объявляет полный набор --color-*/--grain-opacity/--vignette-strength заново, напрямую, без промежуточного имени.",
+      "Do показывать любое состояние партии как прибор — шкалу, показание, деление, маркировку (эталон — ProbeGauge), а не иконкой или символом.",
+      "Do держать показания живыми: цифры набегают до целевого значения, шкалы доходят до доли.",
+      "Do держать кристалл монотонно растущим: провал контроля стоит пробы, а не отката продукта назад.",
+      "Do показывать жёлтую опасную разметку только там, где isHazardStage(stage) возвращает true (этапы 1 и 5).",
+      "Do держать длинное чтение на Surface kind=\"paper\" с честным контрастом (≥4.5:1) внутри грейда текущего этапа.",
+      "Do показывать честное неактивное состояние формой (пунктирная рамка, без заливки), а не только пониженной прозрачностью.",
+      "Do оборачивать любое незаслоённое базовое CSS-правило в @layer base в globals.css — закрыто тестом src/styles/tokens.test.tsx.",
+      "Do объявлять цветовые переменные каждого этапа напрямую на [data-stage='…'], одним уровнем.",
+      "Do подключать все три гарнитуры мира только с реально нужными сабсетами, проверяя присутствие кириллического woff2-файла в пакете."
+    ],
+    "donts": [
+      "Don't объявлять семантический цветовой токен один раз на :root через var(--stage-*) и переопределять только промежуточную переменную глубже в дереве — все этапы вычислятся в значение первого объявленного, и это не ловится тестами, только getComputedStyle на живом DOM.",
+      "Don't объявлять сброс или базовые CSS-правила вне @layer base в globals.css — подтверждённая ловушка каскадных слоёв Tailwind 4.",
+      "Don't закрывать CSS-комментарий раньше времени последовательностью */ внутри текста самого комментария — молча ломает следующее правило.",
+      "Don't показывать жёлтую опасную разметку вне этапов 1 и 5 — она перестаёт означать опасность, если появляется где-то ещё.",
+      "Don't ставить показатель чистоты или любое приборное показание рядом с ценой или коммерческим утверждением.",
+      "Don't давать кристаллу уменьшаться или сбрасываться при провале контроля.",
+      "Don't заводить абстрактные метафоры, частицы или символы, требующие расшифровки.",
+      "Don't заводить стеклянные колбы, клетки периодической таблицы или подвальные чаны как реквизит — заказчик выбрал только три приметы, а не общий словарь «лаборатория».",
+      "Don't заливать неактивную кнопку полупрозрачной заливкой акцента «чтобы было видно, что это кнопка» — только пунктирная рамка без заливки.",
+      "Don't маскировать отсутствующий источник (видео, внешнюю ссылку) битым плеером, мёртвой ссылкой или белым экраном."
+    ]
+  }
+}

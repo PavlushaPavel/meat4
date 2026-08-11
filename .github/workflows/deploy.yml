@@ -1,0 +1,92 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Выкладка идёт пушем в ветку gh-pages, поэтому нужна запись в содержимое
+permissions:
+  contents: write
+
+# Параллельные деплои не нужны: держим один активный, но не рвём уже идущий
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        # base задаётся здесь, а не в vite.config.ts: путь публикации — свойство
+        # деплоя, а не исходников. Абсолютный base обязателен, потому что SPA-фолбэк
+        # отдаёт index.html на любой путь: при относительном './' адрес со слэшем
+        # на конце (/meat2/prefreim/) разрешал бы ассеты в несуществующий
+        # /meat2/prefreim/assets/ и давал белый экран.
+        run: npm run build -- --base=/${{ github.event.repository.name }}/
+        env:
+          # Переменные сборки. Пустые значения безопасны: слот видео показывает
+          # честное «материал пока не подключён», кнопка на внешний ресурс
+          # становится неактивной с подписью (docs/SPEC.md §3.7).
+          VITE_VIDEO_1_URL: ${{ vars.VITE_VIDEO_1_URL }}
+          VITE_VIDEO_2_URL: ${{ vars.VITE_VIDEO_2_URL }}
+          VITE_VIDEO_3_URL: ${{ vars.VITE_VIDEO_3_URL }}
+          VITE_ASSISTANT_AUDIENCE_URL: ${{ vars.VITE_ASSISTANT_AUDIENCE_URL }}
+          VITE_ASSISTANT_OFFER_URL: ${{ vars.VITE_ASSISTANT_OFFER_URL }}
+          VITE_ANALYTICS_URL: ${{ vars.VITE_ANALYTICS_URL }}
+          VITE_LANDING_DEMO_URL: ${{ vars.VITE_LANDING_DEMO_URL }}
+          VITE_CHECKOUT_URL: ${{ vars.VITE_CHECKOUT_URL }}
+          VITE_SUPPORT_URL: ${{ vars.VITE_SUPPORT_URL }}
+
+      - name: SPA fallback
+        # GitHub Pages отдаёт 404 на любой путь кроме корня. Копия index.html
+        # под именем 404.html делает маршрут /meat4/... рабочим при прямом заходе.
+        run: cp dist/index.html dist/404.html
+
+      - name: Publish to gh-pages
+        # Публикуем пушем в ветку, а НЕ через actions/deploy-pages.
+        #
+        # Почему так: 06.08.2026 у GitHub одновременно встали оба конвейера —
+        # раннеры Actions не выделялись (задание отменялось по таймауту очереди,
+        # не выполнив ни одного шага), а очередь Pages-деплоя не забирала
+        # готовый артефакт. Экшен deploy-pages ждёт максимум 10 минут, поднять
+        # нельзя, и по истечении сам отменяет деплой, после чего отменённый
+        # деплой блокирует следующие: его идентификатор равен хэшу коммита.
+        #
+        # Пуш в ветку убирает одну из двух зависимостей: очередь Pages-деплоя
+        # больше не участвует. Источник Pages в настройках репозитория должен
+        # стоять на ветке gh-pages. Чтобы вернуться на прежнюю схему: заменить
+        # этот шаг на configure-pages + upload-pages-artifact + deploy-pages,
+        # вернуть разрешения pages+id-token и переключить источник на Actions.
+        run: |
+          cd dist
+          # .nojekyll обязателен: без него Pages прогоняет выкладку через
+          # Jekyll и выбрасывает всё, что начинается с подчёркивания.
+          touch .nojekyll
+          git init -q
+          git checkout -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Выкладка ${{ github.sha }}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages

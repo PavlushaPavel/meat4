@@ -1,0 +1,173 @@
+/**
+ * Три гарнитуры мира — самохостинг, только нужные сабсеты (мобильный
+ * интернет читателя, не студийный Wi-Fi).
+ *
+ * ПЕРЕСОБРАНО 07.08.2026 вместе с миром («Шесть актов» → «Синтез партии»,
+ * docs/SPEC.md §1): все три гарнитуры сохранены как есть — заказчик прямо
+ * сказал, что менять их не обязательно, они подходят и лаборатории. Ниже
+ * обоснование пересмотрено под новый материал (приборы, а не киноплёнка).
+ *
+ * ВЫБОР И ПОЧЕМУ:
+ *  - Дисплей — Oswald Variable. Узкий, тяжёлый, гротескный: ровно то, что
+ *    нужно для номера этапа во весь кадр карточки стадии и для коротких
+ *    дисплейных строк — табличка оборудования, а не приветливый заголовок
+ *    сайта. Вариативный (wght 200–700), кириллица подтверждена файлом пакета.
+ *  - Тело — PT Serif. Не геометрический гротеск — засечки дают эффект
+ *    «протокол, лабораторный журнал», предметному материалу мира ближе, чем
+ *    нейтральная UI-гарнитура: длинное чтение остаётся документом даже в
+ *    цеху (SPEC.md §1, правило 5). Разработана ParaType под длинное русское
+ *    чтение — то, что нужно на полутора тысячах слов с телефона. Только
+ *    статические начертания 400/700 (регулярный и полужирный), без курсива —
+ *    курсив в этом мире не нужен нигде (врезки набраны не курсивом, см.
+ *    `Blocks.tsx`), а это два лишних файла на сабсет.
+ *  - Легенда — JetBrains Mono Variable. Моноширинный, для показаний приборов
+ *    (`PurityMeter`), номеров этапов, служебных подписей — ЖК-панель прибора
+ *    моноширинная по своей природе, здесь эта гарнитура даже уместнее, чем
+ *    в снесённом кино-мире. Цифры показаний обязаны идти с
+ *    `font-variant-numeric: tabular-nums` (см. `PurityMeter.tsx`) — иначе
+ *    набегающее число будет «гулять» по ширине на каждом кадре счёта.
+ *    Гарнитура и подтверждение кириллицы — без изменений от прежнего мира.
+ *
+ * Подключены сабсеты:
+ *   - cyrillic     — основной алфавит текста воронки (U+0400-045F, ё включена)
+ *   - latin        — цифры, пунктуация, латинские вставки (GPT, %, VS)
+ *   - latin-ext     — держит U+20AD-20C0, то есть знак ₽ (U+20BD) для оффера;
+ *                     в подсете `latin` его нет, только в `latin-ext`
+ * cyrillic-ext (доп. буквы других славянских языков), vietnamese и greek не
+ * нужны для русского текста и не подключаются нигде.
+ *
+ * Oswald: latin-ext НЕ подключён — дисплей несёт только короткие строки
+ * (римский номер, «ОБВИНЕНИЕ», «ТУПИК»…), знак ₽ там взяться неоткуда
+ * (цена оффера — тело текста, не заголовок). Если он всё же туда попадёт,
+ * стек `--font-display` подстрахован вторым шрифтом 'PT Serif', у которого
+ * latin-ext подключён — а не проваливается молча в системный фолбэк.
+ * PT Serif и JetBrains Mono держат latin-ext без исключений — там он
+ * покрывает и тело текста, и легенду.
+ *
+ * Кириллица проверена вручную по файлам пакетов, доказательство — в отчёте
+ * задачи: node_modules/@fontsource-variable/oswald/files/*-cyrillic-*.woff2,
+ * node_modules/@fontsource/pt-serif/files/*-cyrillic-*.woff2 и
+ * node_modules/@fontsource-variable/jetbrains-mono/files/*-cyrillic-*.woff2
+ * присутствуют у всех трёх гарнитур.
+ */
+
+/* ---------- Oswald Variable — дисплей (cyrillic + latin, без latin-ext) ---------- */
+
+@font-face {
+  font-family: 'Oswald Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 700;
+  src: url('@fontsource-variable/oswald/files/oswald-cyrillic-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: 'Oswald Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 700;
+  src: url('@fontsource-variable/oswald/files/oswald-latin-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ---------- PT Serif — тело (cyrillic + latin + latin-ext, только 400/700 normal) ---------- */
+
+@font-face {
+  font-family: 'PT Serif';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('@fontsource/pt-serif/files/pt-serif-cyrillic-400-normal.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: 'PT Serif';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('@fontsource/pt-serif/files/pt-serif-latin-ext-400-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'PT Serif';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('@fontsource/pt-serif/files/pt-serif-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'PT Serif';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url('@fontsource/pt-serif/files/pt-serif-cyrillic-700-normal.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: 'PT Serif';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url('@fontsource/pt-serif/files/pt-serif-latin-ext-700-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'PT Serif';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url('@fontsource/pt-serif/files/pt-serif-latin-700-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ---------- JetBrains Mono Variable — легенда ---------- */
+/* Только normal: легенда мира держится ровно, курсив не нужен. */
+
+@font-face {
+  font-family: 'JetBrains Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('@fontsource-variable/jetbrains-mono/files/jetbrains-mono-cyrillic-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-ext-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
