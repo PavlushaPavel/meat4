@@ -108,10 +108,10 @@ describe('воронка при пустом окружении', () => {
     render(<App />);
 
     // --- Вход: воронка начинается с голосового, а не с текста ---
-    expect(screen.getByText(preframe.message.text)).toBeTruthy();
+    expect(screen.getByText(preframe.voice.title)).toBeTruthy();
     await enterScene();
 
-    // --- Шаг 1. Префрейм: сообщение клиента и отъезд камеры ---
+    // --- Шаг 1. Префрейм: город, кабинет и претензии клиента ---
     /**
      * Подсказка про тап обязана быть на экране С ПЕРВОГО КАДРА. Сцена идёт
      * сама и кнопок не показывает: без этой строки человек не может узнать,
@@ -119,10 +119,21 @@ describe('воронка при пустом окружении', () => {
      */
     expect(screen.getByText(sceneUi.tapHint)).toBeTruthy();
 
-    // Первый такт — уведомление с «печатает…»; текст целиком человек видит
-    // тактом позже. Тап делает ровно то же, что сделало бы ожидание таймера.
-    await press(sceneUi.tapAria);
-    expect(await screen.findByText(preframe.message.text)).toBeTruthy();
+    /**
+     * Претензия клиента обязана прийти В КАДР, а не только в лог реплик. Автор
+     * произносит её как чужую речь, и весь смысл такта в том, что человек
+     * узнаёт СВОЮ переписку: пузырь мессенджера поверх города. Поэтому текст
+     * ищется дважды — пузырём в кадре и репликой в логе; одного вхождения
+     * достаточно, чтобы кадр молча перестал показывать претензию.
+     *
+     * Номер такта не зашит: сценарий правится текстом, и такт с первой
+     * претензией опознаётся по ней самой. Тап делает ровно то же, что сделало
+     * бы ожидание таймера.
+     */
+    const firstClaim = preframeBeats.findIndex((b) => b.say[0] === preframe.claims[0]);
+    expect(firstClaim).toBeGreaterThan(0);
+    for (let i = 0; i < firstClaim; i += 1) await press(sceneUi.tapAria);
+    await waitFor(() => expect(screen.getAllByText(preframe.claims[0]).length).toBe(2));
     await skipScene();
     await press(preframe.cta);
 
@@ -230,8 +241,16 @@ describe('вход через голосовое', () => {
   it('до нажатия сцены нет, после — есть', async () => {
     render(<App />);
 
-    // Претензия клиента на месте: сначала человек узнаёт свою ситуацию.
-    expect(screen.getByText(preframe.message.text)).toBeTruthy();
+    /**
+     * На входе лежит ОДНО сообщение и ничего больше. Претензии клиента звучат
+     * внутри записи и показываются сценой в момент, когда автор их произносит;
+     * выложенные ещё и на первый экран, они превращали бы вход в пересказ того,
+     * что человек через минуту услышит.
+     */
+    expect(screen.getByText(preframe.voice.title)).toBeTruthy();
+    for (const claim of preframe.claims) {
+      expect(screen.queryByText(claim)).toBeNull();
+    }
 
     // А сцены нет: ни подсказки про тап, ни «пропустить», ни реплик автора.
     expect(screen.queryByText(sceneUi.tapHint)).toBeNull();

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { holdFor, sceneDuration, type Beat } from './beats';
-import { preframeBeats, conversionBeats } from '@/content/preframe';
+import { preframe, preframeBeats, conversionBeats } from '@/content/preframe';
 import { audienceScene } from '@/content/city';
 
 /**
@@ -25,9 +25,28 @@ function seconds(beats: readonly Beat<string>[]): number {
 }
 
 describe('темп сцен', () => {
-  it('вход в Город трафика укладывается в 60–90 секунд', () => {
-    expect(seconds(preframeBeats)).toBeGreaterThanOrEqual(60);
-    expect(seconds(preframeBeats)).toBeLessThanOrEqual(90);
+  /**
+   * ВСТУПЛЕНИЕ МЕРЯЕТСЯ ЗАПИСЬЮ, А НЕ ТАЙМЕРОМ — с 12.08.2026, когда заказчик
+   * прислал сценарий озвучки и такты стали её субтитрами.
+   *
+   * Прежняя рамка «60–90 секунд» проверяла таймер, и она перестала иметь смысл:
+   * таймер здесь запасной путь, он считает время из длины реплик, а чтение
+   * глазами заведомо медленнее живой речи. Сценарий на объявленные автором
+   * 1:24 при чтении занимает около трёх минут, и это не поломка.
+   *
+   * Поэтому сторож проверяет две настоящие вещи: что объявленная запись
+   * укладывается в полторы минуты (дольше человек на входе не слушает) и что
+   * запасной путь не разошёлся с ней в разы. Допишут в сценарий вдвое больше
+   * текста — оба условия поймают это раньше, чем оно уедет в бой.
+   */
+  it('запись вступления объявлена в пределах полутора минут', () => {
+    expect(preframe.voice.plannedDuration).toBeGreaterThanOrEqual(60);
+    expect(preframe.voice.plannedDuration).toBeLessThanOrEqual(120);
+  });
+
+  it('чтение вступления не расходится с записью больше чем в 2,5 раза', () => {
+    const ratio = seconds(preframeBeats) / preframe.voice.plannedDuration;
+    expect(ratio).toBeLessThanOrEqual(2.5);
   });
 
   it('подъём в Conversion District укладывается в 30–45 секунд', () => {

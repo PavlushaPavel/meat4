@@ -65,8 +65,14 @@ export function useVoice<Cue extends string>(
   const [duration, setDuration] = useState(0);
   const [rate, setRate] = useState<number>(RATES[0]);
 
-  const [index, setIndex] = useState(0);
-  const [done, setDone] = useState(false);
+  /**
+   * При `prefers-reduced-motion` сцена не проигрывается: человек сразу получает
+   * весь текст и кнопку. Значит и кадр обязан быть ПОСЛЕДНИМ, а не первым —
+   * иначе под полным логом стоит первая картинка вступления, и это выглядит как
+   * подвисшая сцена. В `useBeats` то же место сделано так же.
+   */
+  const [index, setIndex] = useState(() => (reduceMotion ? last : 0));
+  const [done, setDone] = useState(() => Boolean(reduceMotion));
 
   // --- Ведёт таймер: записи нет либо метки не расставлены -------------------
 
