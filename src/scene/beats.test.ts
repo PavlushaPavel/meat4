@@ -25,7 +25,7 @@ function seconds(beats: readonly Beat<string>[]): number {
 }
 
 describe('темп сцен', () => {
-  it('вход в Traffic Town укладывается в 60–90 секунд', () => {
+  it('вход в Город трафика укладывается в 60–90 секунд', () => {
     expect(seconds(preframeBeats)).toBeGreaterThanOrEqual(60);
     expect(seconds(preframeBeats)).toBeLessThanOrEqual(90);
   });

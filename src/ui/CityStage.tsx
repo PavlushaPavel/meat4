@@ -3,14 +3,19 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { nextStep, type ActId, type StepKey } from '@/router/flow';
 import { calm, dur, spring, tween } from '@/scene/motion';
 import { cn } from '@/lib/cn';
-import { worldAsset } from './assets';
+import { introAsset, worldAsset } from './assets';
 
 type SceneArt = {
   file: string;
   opacity: number;
   position?: string;
   filter?: string;
+  /** Кадр из папки вступления, а не из мира. См. `introAsset`. */
+  intro?: boolean;
 };
+
+const artUrl = (art: SceneArt): string =>
+  art.intro ? introAsset(art.file) : worldAsset(art.file);
 
 /**
  * Сценография привязана к смысловому повороту, а не к акту целиком. Раньше
@@ -20,8 +25,11 @@ type SceneArt = {
 const SCENE_ART: Partial<Record<StepKey, SceneArt>> = {
   // Акт города. Кадр держит место действия, а внутри такта сцена меняет то,
   // на что человек смотрит (`src/scene/*`).
-  preframe: { file: 'traffic-town-hero.webp', opacity: 0.62, position: '58% center' },
-  conversion: { file: 'traffic-town-map.webp', opacity: 0.54 },
+  // Вступление получило собственные кадры: город с районами рекламных систем
+  // и подъём к району конверсий. Приглушены сильнее, чем задумывались, —
+  // поверх них идёт речь, и контраст текста важнее насыщенности картинки.
+  preframe: { file: 'city-1.webp', opacity: 0.5, position: 'center 62%', intro: true },
+  conversion: { file: 'city-3.webp', opacity: 0.46, position: 'center 30%', intro: true },
   audience: { file: 'traffic-town-map.webp', opacity: 0.48 },
 
   // Акт обучения фона НЕ ИМЕЕТ, и это решение, а не пропуск. Человек сел
@@ -118,7 +126,7 @@ export function CityStage({
     const nextArt = following ? SCENE_ART[following] : null;
     if (!nextArt) return;
     const image = new Image();
-    image.src = worldAsset(nextArt.file);
+    image.src = artUrl(nextArt);
   }, [step]);
 
   return (
@@ -145,7 +153,7 @@ export function CityStage({
             key={art.file}
             className="stage-art"
             style={{
-              backgroundImage: `url("${worldAsset(art.file)}")`,
+              backgroundImage: `url("${artUrl(art)}")`,
               backgroundPosition: art.position,
               filter: art.filter,
             }}

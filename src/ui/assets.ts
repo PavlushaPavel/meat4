@@ -13,3 +13,15 @@
 export function worldAsset(file: string): string {
   return `${import.meta.env.BASE_URL}world/${file}`;
 }
+
+/**
+ * Кадры вступления: город и автор, присланные заказчиком 12.08.2026.
+ *
+ * Лежат отдельно от `world/` намеренно. Это другой визуальный регистр —
+ * глянцевый сине-золотой мегаполис против ночной промзоны остальной воронки, —
+ * и он живёт только во вступлении. Общая папка со временем стёрла бы эту
+ * границу, и кадры расползлись бы по шагам, где им не место (DESIGN.md §3.1).
+ */
+export function introAsset(file: string): string {
+  return `${import.meta.env.BASE_URL}intro/${file}`;
+}

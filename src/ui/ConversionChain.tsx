@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from 'motion/react';
 import { prevStep, type StepKey } from '@/router/flow';
-import { CHAIN, ZONES, zoneState, type ZoneId, type ZoneState } from '@/world';
+import { CHAIN, DISTRICT_NAME, ZONES, zoneState, type ZoneId, type ZoneState } from '@/world';
 import { dur, ease, spring, tween } from '@/scene/motion';
 import { Legend } from '@/ui/Plate';
 import { cn } from '@/lib/cn';
@@ -17,8 +17,8 @@ import { cn } from '@/lib/cn';
  *    неон. Пятого визуального состояния нет.
  * 3. Поток между участками горит, ТОЛЬКО если открыты оба соседних. Горящая
  *    линия в закрытый участок — обещание, которого продукт не выполняет.
- * 4. ЛИД, КВАЛ и ПРОДАЖА не загораются никогда. Они внутри рамки Conversion
- *    District, потому что это часть пути денег, но серые, потому что не твои.
+ * 4. ЛИД, КВАЛ и ПРОДАЖА не загораются никогда. Они внутри рамки района
+ *    конверсий, потому что это часть пути денег, но серые, потому что не твои.
  * 5. ТРАФИК стоит ВЫШЕ рамки. Рекламный кабинет — не участок конверсии, и
  *    вся мысль воронки в том, что человек всю жизнь работал над одной
  *    строчкой, стоящей до неё.
@@ -45,7 +45,7 @@ export function ConversionChain({
           tone="dim"
           className="absolute -top-2 left-3 bg-scene px-2"
         >
-          CONVERSION DISTRICT
+          {DISTRICT_NAME}
         </Legend>
 
         {inside.map((id, i) => (

@@ -11,11 +11,14 @@ import {
 import { preframe, preframeBeats, type PreframeCue } from '@/content/preframe';
 import { SceneShell } from '@/scene/SceneShell';
 import { calm, dur, ease, tween } from '@/scene/motion';
-import { useBeats } from '@/scene/useBeats';
+import { useVoice } from '@/scene/useVoice';
 import { useNav } from '@/router/useNav';
+import { VoiceIntro } from './VoiceIntro';
+import { env } from '@/lib/env';
 import { AdConsole } from '@/ui/AdConsole';
 import { AuthorLine, AuthorNote } from '@/ui/AuthorNote';
 import { CitySkyline } from '@/ui/CitySkyline';
+import { introAsset } from '@/ui/assets';
 import { IncomingMessage } from '@/ui/IncomingMessage';
 import { MetalPanel } from '@/ui/MetalPanel';
 import { vibrate } from '@/lib/telegram';
@@ -23,7 +26,7 @@ import { HOME_SOURCE } from '@/world';
 import { cn } from '@/lib/cn';
 
 /**
- * Состояние 1. Вход в Traffic Town.
+ * Состояние 1. Вход в Город трафика.
  *
  * ОДНА СЦЕНА НА ПОЛТОРЫ МИНУТЫ, И НИ ОДНОГО НАЖАТИЯ ВНУТРИ. Прежняя воронка
  * резала эту же мысль на девять экранов с кнопкой «дальше» под каждым; здесь
@@ -37,13 +40,23 @@ import { cn } from '@/lib/cn';
  */
 export function PreframeScreen() {
   const { next } = useNav();
-  const run = useBeats(preframeBeats);
+  const voice = useVoice(preframeBeats, env.VITE_VOICE_INTRO_URL);
+
+  /**
+   * ВОРОНКА НАЧИНАЕТСЯ С НАЖАТИЯ, А НЕ С ТЕКСТА. Пока человек не тронул
+   * воспроизведение, сцены нет вовсе: на экране переписка с клиентом и
+   * пришедшее голосовое. Это первый осмысленный жест — им человек соглашается
+   * слушать, и он же снимает запрет браузера на звук без действия.
+   */
+  if (!voice.started) {
+    return <VoiceIntro voice={voice} />;
+  }
 
   return (
     <SceneShell
-      run={run}
+      run={voice.run}
       total={preframeBeats.length}
-      stage={<PreframeStage index={run.index} cue={run.current.cue} />}
+      stage={<PreframeStage index={voice.run.index} cue={voice.run.current.cue} />}
       cta={preframe.cta}
       onCta={next}
     />
@@ -199,19 +212,24 @@ function AuthorScene() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative h-28">
+      <div className="relative h-40">
         <CitySkyline className="absolute inset-x-0 bottom-0 h-20 opacity-40" />
-        <motion.div
+        {/*
+          Автор появляется собой, а не силуэтом. До 12.08.2026 здесь стояла
+          процедурная фигура из двух блоков — честная заглушка, пока портрета не
+          было. Обещание «дальше говорю я» она не выполняла: голос был, лица не
+          было. Теперь это тот же человек, что и на аватарке голосового, —
+          узнавание переходит из сообщения в сцену.
+        */}
+        <motion.img
+          src={introAsset('author.webp')}
+          alt=""
           aria-hidden="true"
           initial={reduceMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={calm(reduceMotion, tween(dur.screen))}
-          className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col items-center"
-        >
-          {/* Кромка сверху — свет вывески района за спиной. */}
-          <span className="size-6 rounded-full bg-scene-deep ring-1 ring-neon-dim/60" />
-          <span className="-mt-1 h-16 w-16 rounded-t-[45%] bg-scene-deep ring-1 ring-neon-dim/35" />
-        </motion.div>
+          className="absolute bottom-0 left-1/2 h-40 -translate-x-1/2 object-contain object-bottom drop-shadow-[0_12px_28px_rgba(0,0,0,0.6)]"
+        />
       </div>
 
       <AuthorNote>

@@ -20,6 +20,11 @@ export const env = {
     VITE_VIDEO_2_URL: readEnv(import.meta.env.VITE_VIDEO_2_URL),
     VITE_VIDEO_3_URL: readEnv(import.meta.env.VITE_VIDEO_3_URL),
   },
+  /**
+   * Голосовое вступление автора. Пусто — воронка начинается тем же нажатием,
+   * но дальше идёт текстом по таймеру: пузырь честно говорит, что записи нет.
+   */
+  VITE_VOICE_INTRO_URL: readEnv(import.meta.env.VITE_VOICE_INTRO_URL),
   VITE_ASSISTANT_AUDIENCE_URL: readEnv(import.meta.env.VITE_ASSISTANT_AUDIENCE_URL),
   VITE_ASSISTANT_OFFER_URL: readEnv(import.meta.env.VITE_ASSISTANT_OFFER_URL),
   VITE_ANALYTICS_URL: readEnv(import.meta.env.VITE_ANALYTICS_URL),

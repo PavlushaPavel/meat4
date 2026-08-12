@@ -7,7 +7,7 @@ import { preframe, preframeBeats, conversion } from '@/content/preframe';
 import { LESSONS, LESSON_UI } from '@/content/lessons';
 import { audienceScene, bundleFinale } from '@/content/city';
 import { quizBank, quizCopy, LIVES } from '@/content/quiz';
-import { sceneUi } from '@/content/scene';
+import { sceneUi, voiceUi } from '@/content/scene';
 import { ZONES } from '@/world';
 
 /**
@@ -50,6 +50,17 @@ async function skipScene() {
 
 /** Подпись «пропустить» одна на все сцены и живёт в контенте. */
 const SKIP_LABEL = sceneUi.skip;
+
+/**
+ * Войти в сцену через голосовое сообщение.
+ *
+ * Воронка начинается нажатием на воспроизведение, а не текстом. В тестах
+ * окружение пустое, записи нет — кнопка честно предлагает начать без неё, и
+ * это тот же путь, которым пойдёт человек, пока запись не смонтирована.
+ */
+async function enterScene() {
+  await press(voiceUi.pendingAction);
+}
 
 /**
  * Найти вопрос, который сейчас на экране.
@@ -95,6 +106,10 @@ describe('воронка при пустом окружении', () => {
 
   it('проходится целиком: от сообщения клиента до цены', async () => {
     render(<App />);
+
+    // --- Вход: воронка начинается с голосового, а не с текста ---
+    expect(screen.getByText(preframe.message.text)).toBeTruthy();
+    await enterScene();
 
     // --- Шаг 1. Префрейм: сообщение клиента и отъезд камеры ---
     /**
@@ -180,6 +195,7 @@ describe('подсказка про тап', () => {
    */
   it('исчезает, когда жест уже понят', async () => {
     render(<App />);
+    await enterScene();
     expect(screen.getByText(sceneUi.tapHint)).toBeTruthy();
 
     /**
@@ -195,6 +211,51 @@ describe('подсказка про тап', () => {
     // главного действия на экране пока нет.
     expect(screen.queryByRole('button', { name: preframe.cta })).toBeNull();
     expect(preframeBeats.length).toBeGreaterThan(3);
+  });
+});
+
+describe('вход через голосовое', () => {
+  beforeEach(() => {
+    cleanup();
+    useFunnel.setState(useFunnel.getInitialState(), true);
+    window.localStorage.clear();
+  });
+
+  /**
+   * ВОРОНКА НАЧИНАЕТСЯ НАЖАТИЕМ, А НЕ ТЕКСТОМ. Это не украшение входа: пока
+   * человек не тронул воспроизведение, сцены не существует. Жест снимает и
+   * браузерный запрет на звук без действия, и вопрос «что тут делать» — вместо
+   * полутора минут текста, которые надо начать читать без всякой причины.
+   */
+  it('до нажатия сцены нет, после — есть', async () => {
+    render(<App />);
+
+    // Претензия клиента на месте: сначала человек узнаёт свою ситуацию.
+    expect(screen.getByText(preframe.message.text)).toBeTruthy();
+
+    // А сцены нет: ни подсказки про тап, ни «пропустить», ни реплик автора.
+    expect(screen.queryByText(sceneUi.tapHint)).toBeNull();
+    expect(screen.queryByRole('button', { name: sceneUi.skip })).toBeNull();
+
+    await enterScene();
+
+    expect(await screen.findByText(sceneUi.tapHint)).toBeTruthy();
+    expect(await screen.findByRole('button', { name: sceneUi.skip })).toBeTruthy();
+  });
+
+  /**
+   * Записи пока нет, и пузырь обязан это говорить, а не делать вид. Полоса,
+   * бегущая по тишине, — та же ложь, что выдуманный таймкод на несуществующем
+   * видео (docs/SPEC.md §3.7).
+   */
+  it('без записи честно сообщает об этом и всё равно пускает дальше', async () => {
+    render(<App />);
+    expect(screen.getAllByText(voiceUi.pending).length).toBeGreaterThan(0);
+    expect(screen.queryByText(voiceUi.invite)).toBeNull();
+
+    await enterScene();
+    expect(useFunnel.getState().step).toBe(STEPS[0]);
+    expect(await screen.findByText(sceneUi.tapHint)).toBeTruthy();
   });
 });
 
@@ -218,6 +279,7 @@ describe('композиция сцены', () => {
    */
   it('новая реплика стоит выше прошлой, а не под ней', async () => {
     render(<App />);
+    await enterScene();
 
     // Первые такты префрейма молчат — там говорит телефон, а не автор.
     const spoken = preframeBeats.filter((b) => b.say.length > 0);
@@ -274,6 +336,7 @@ describe('сброс прохода', () => {
    */
   it('перезапускает сцену, даже когда шаг не изменился', async () => {
     render(<App />);
+    await enterScene();
     await skipScene();
 
     // Сцена договорила: действие есть, подсказка ушла. Ждём её ухода, а не
@@ -287,6 +350,8 @@ describe('сброс прохода', () => {
     });
 
     expect(useFunnel.getState().step).toBe(STEPS[0]);
+    // Сброс возвращает и к голосовому: воронка начинается заново целиком.
+    await enterScene();
     expect(await screen.findByText(sceneUi.tapHint)).toBeTruthy();
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: preframe.cta })).toBeNull(),

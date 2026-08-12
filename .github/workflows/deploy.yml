@@ -48,6 +48,7 @@ jobs:
           # Переменные сборки. Пустые значения безопасны: слот видео показывает
           # честное «материал пока не подключён», кнопка на внешний ресурс
           # становится неактивной с подписью (docs/SPEC.md §3.7).
+          VITE_VOICE_INTRO_URL: ${{ vars.VITE_VOICE_INTRO_URL }}
           VITE_VIDEO_1_URL: ${{ vars.VITE_VIDEO_1_URL }}
           VITE_VIDEO_2_URL: ${{ vars.VITE_VIDEO_2_URL }}
           VITE_VIDEO_3_URL: ${{ vars.VITE_VIDEO_3_URL }}

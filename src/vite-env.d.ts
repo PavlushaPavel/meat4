@@ -21,6 +21,9 @@ interface ImportMetaEnv {
   readonly VITE_VIDEO_2_URL: string | undefined;
   readonly VITE_VIDEO_3_URL: string | undefined;
 
+  /** Голосовое вступление автора. Пока не записано. */
+  readonly VITE_VOICE_INTRO_URL: string | undefined;
+
   /** Ассистенты, которых автор показывает внутри глав. */
   readonly VITE_ASSISTANT_AUDIENCE_URL: string | undefined;
   readonly VITE_ASSISTANT_OFFER_URL: string | undefined;
