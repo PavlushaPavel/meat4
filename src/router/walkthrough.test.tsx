@@ -198,6 +198,44 @@ describe('подсказка про тап', () => {
   });
 });
 
+describe('композиция сцены', () => {
+  beforeEach(() => {
+    cleanup();
+    useFunnel.setState(useFunnel.getInitialState(), true);
+    window.localStorage.clear();
+  });
+
+  /**
+   * НОВОЕ СВЕРХУ — ГЛАВНОЕ РЕШЕНИЕ КОМПОЗИЦИИ, И ОНО ЛЕГКО ОТКАТЫВАЕТСЯ.
+   *
+   * При хронологическом порядке текущая реплика уезжает всё ниже с каждым
+   * тактом: взгляду приходится догонять её по экрану, а к середине сцены она
+   * уходит за сгиб — ровно та поломка, из-за которой экран пересобирали.
+   * Обратный порядок держит её в одной точке, вплотную к кадру.
+   *
+   * Проверяется порядок в разметке, а не стили: подмена `flex-col-reverse` на
+   * `flex-col` или потеря `.reverse()` не видна ни типам, ни линту.
+   */
+  it('новая реплика стоит выше прошлой, а не под ней', async () => {
+    render(<App />);
+
+    // Первые такты префрейма молчат — там говорит телефон, а не автор.
+    const spoken = preframeBeats.filter((b) => b.say.length > 0);
+    const [older, newer] = spoken;
+    expect(older && newer).toBeTruthy();
+
+    for (let i = 0; i < preframeBeats.indexOf(newer); i += 1) {
+      await press(sceneUi.tapAria);
+    }
+
+    const olderLine = await screen.findByText(older.say[0]);
+    const newerLine = await screen.findByText(newer.say[0]);
+
+    const order = Array.from(document.querySelectorAll<HTMLElement>('p'));
+    expect(order.indexOf(newerLine)).toBeLessThan(order.indexOf(olderLine));
+  });
+});
+
 describe('сброс прохода', () => {
   beforeEach(() => {
     cleanup();
