@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { sceneUi } from '@/content/scene';
 import { calm, dur, lead, tween } from '@/scene/motion';
@@ -71,6 +71,7 @@ export function SceneShell<Cue extends string>({
   stage,
   cta,
   onCta,
+  stageTall,
   className,
 }: {
   run: BeatRun<Cue>;
@@ -81,6 +82,11 @@ export function SceneShell<Cue extends string>({
   /** Подпись главного действия, которое появляется, когда сцена договорила. */
   cta: string;
   onCta: () => void;
+  /**
+   * Такт, на котором кадр важнее речи и обязан получить больше высоты.
+   * Решает сцена: только она знает, что именно показывает город сейчас.
+   */
+  stageTall?: boolean;
   className?: string;
 }) {
   const reduceMotion = useReducedMotion();
@@ -120,12 +126,7 @@ export function SceneShell<Cue extends string>({
         style={{ transformOrigin: 'top' }}
         className="flex min-h-0 flex-1 flex-col gap-4"
       >
-        {/*
-          Высота кадра считается от экрана, но с потолком и полом: на 360×640
-          иначе не остаётся места на речь, а на большом экране кадр раздувается
-          в обои. Смысл несёт текст — высоту отдаёт кадр, а не наоборот.
-        */}
-        <div className="relative h-[clamp(150px,30dvh,260px)] shrink-0">{stage}</div>
+        <StageBox tall={stageTall}>{stage}</StageBox>
         <BeatLog said={said} reduceMotion={Boolean(reduceMotion)} />
       </motion.div>
 
@@ -172,6 +173,88 @@ export function SceneShell<Cue extends string>({
         </AnimatePresence>
       </footer>
     </Screen>
+  );
+}
+
+/**
+ * Ниже какого масштаба кадр уже не ужимаем.
+ *
+ * Дальше начинается нечитаемый шрифт на табличках и участках связки, и честнее
+ * обрезать край кадра, чем показать мелкую кашу. На практике до этой границы не
+ * доходит: связка из семи участков ужимается примерно до 0.75.
+ */
+const MIN_FIT = 0.7;
+
+/**
+ * Кадр города: коробка, в которую содержимое всегда помещается.
+ *
+ * ЗАЧЕМ ЭТО ВООБЩЕ НУЖНО, А НЕ ПРОСТО ВЫСОТА. Разные такты показывают разное по
+ * высоте: у одних это вывеска и силуэт, у других — связка из семи участков,
+ * почти в две трети экрана. Одна фиксированная высота на всех обязана быть либо
+ * слишком большой (речи не остаётся места), либо слишком маленькой — и тогда
+ * высокий кадр ВЫЛЕЗАЕТ НА ТЕКСТ. Именно это и произошло 12.08.2026: `scale` в
+ * сцене подъёма уменьшает картинку визуально, но в раскладке элемент занимает
+ * прежнюю высоту, и связка легла поверх реплик.
+ *
+ * Поэтому у коробки не высота, а ПОТОЛОК. Короткий кадр — вывеска, силуэт —
+ * занимает ровно себя, и речь подтягивается к нему вплотную; фиксированная
+ * высота оставляла бы под ним пустой провал. Высокий кадр упирается в потолок и
+ * ужимается ровно настолько, чтобы поместиться, но не сильнее `MIN_FIT`.
+ *
+ * Налезание становится невозможным по построению, а не по удачно выбранной
+ * высоте, которую сломает следующий такт.
+ *
+ * `overflow-hidden` — последний рубеж на случай, когда даже `MIN_FIT` не спас:
+ * лучше обрезанный край кадра, чем город поверх текста.
+ *
+ * Масштаб не меняет размер элемента в раскладке, поэтому наблюдатель не
+ * зацикливается: пересчёт вызывает только настоящее изменение размеров.
+ */
+function StageBox({ children, tall }: { children: ReactNode; tall?: boolean }) {
+  const box = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState(1);
+
+  useEffect(() => {
+    // В тестовой среде наблюдателя нет: там раскладки не существует вовсе, и
+    // мерить нечего. Кадр остаётся неужатым, разметка та же.
+    if (typeof ResizeObserver === 'undefined') return;
+
+    const measure = () => {
+      const available = box.current?.clientHeight ?? 0;
+      const natural = inner.current?.scrollHeight ?? 0;
+      if (!available || !natural) return;
+      setFit(natural <= available ? 1 : Math.max(MIN_FIT, available / natural));
+    };
+
+    const watch = new ResizeObserver(measure);
+    if (box.current) watch.observe(box.current);
+    if (inner.current) watch.observe(inner.current);
+    measure();
+    return () => watch.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={box}
+      className={cn(
+        'relative shrink-0 overflow-hidden',
+        // Обычный такт отдаёт речи две трети экрана. Такт, чей смысл И ЕСТЬ
+        // схема, забирает больше: связка из семи участков занимает 470px, и в
+        // треть экрана её можно вписать только масштабом 0.49 — то есть
+        // подписями в шесть пикселей. Измерено, а не прикинуто.
+        tall ? 'max-h-[60dvh]' : 'max-h-[36dvh]',
+      )}
+    >
+      <div
+        ref={inner}
+        // Опора сверху: кадр ужимается «вниз от кромки», а не расползается от
+        // центра — верхний край композиции остаётся на месте.
+        style={{ transform: `scale(${fit})`, transformOrigin: 'top center' }}
+      >
+        {children}
+      </div>
+    </div>
   );
 }
 
