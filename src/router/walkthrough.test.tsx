@@ -198,6 +198,64 @@ describe('подсказка про тап', () => {
   });
 });
 
+describe('сброс прохода', () => {
+  beforeEach(() => {
+    cleanup();
+    useFunnel.setState(useFunnel.getInitialState(), true);
+    window.localStorage.clear();
+  });
+
+  it('возвращает в начало и стирает собранное', () => {
+    useFunnel.setState({
+      step: 'bundle',
+      artifacts: ['audience', 'offer', 'landing'],
+      passed: true,
+      proofOpened: true,
+    });
+
+    useFunnel.getState().reset();
+
+    const s = useFunnel.getState();
+    expect(s.step).toBe(STEPS[0]);
+    expect(s.artifacts).toEqual([]);
+    expect(s.passed).toBe(false);
+    expect(s.proofOpened).toBe(false);
+  });
+
+  /**
+   * ГЛАВНОЕ ЗДЕСЬ, И ЭТО БЫЛА НАСТОЯЩАЯ ДЫРА.
+   *
+   * Сброс возвращает шаг в начало. Но если человек УЖЕ на первом шаге, значение
+   * шага не меняется — React не видит причины перемонтировать экран, и сцена
+   * остаётся досмотренной: такты проиграны, главное действие на месте. Кнопка
+   * «начать сначала» при этом выглядит нажатой и не работающей.
+   *
+   * Проверяем не внутренности, а то, что видит человек: после сброса сцена
+   * снова в начале — вернулась подсказка про тап, которая живёт только на
+   * первых тактах, и исчезло главное действие, появляющееся в конце сцены.
+   */
+  it('перезапускает сцену, даже когда шаг не изменился', async () => {
+    render(<App />);
+    await skipScene();
+
+    // Сцена договорила: действие есть, подсказка ушла. Ждём её ухода, а не
+    // проверяем мгновенно: она исчезает с анимацией и ещё живёт в разметке,
+    // пока та идёт.
+    await screen.findByRole('button', { name: preframe.cta });
+    await waitFor(() => expect(screen.queryByText(sceneUi.tapHint)).toBeNull());
+
+    await act(async () => {
+      useFunnel.getState().reset();
+    });
+
+    expect(useFunnel.getState().step).toBe(STEPS[0]);
+    expect(await screen.findByText(sceneUi.tapHint)).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: preframe.cta })).toBeNull(),
+    );
+  });
+});
+
 describe('ошибка в проверке', () => {
   beforeEach(() => {
     cleanup();

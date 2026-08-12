@@ -29,6 +29,7 @@ import { isDebugEnabled } from '@/lib/debug';
  */
 export default function App() {
   const step = useFunnel((s) => s.step);
+  const runId = useFunnel((s) => s.runId);
   const Screen = SCREENS[step];
   const act = actOfStep(step);
   // Читается один раз за загрузку: флаг не меняется по ходу сессии.
@@ -63,7 +64,13 @@ export default function App() {
       */}
       {debug && <DebugBar />}
       <CityStage act={act} step={step}>
-        <Screen />
+        {/*
+          Ключ включает номер прохода, а не только шаг. Сцены держат состояние
+          внутри себя (какой такт играет, что уже сказано), и сброс из начала
+          воронки не менял бы шаг — экран остался бы досмотренным, а кнопка
+          «начать сначала» выглядела бы сломанной. См. `runId` в сторе.
+        */}
+        <Screen key={`${step}-${runId}`} />
       </CityStage>
     </>
   );
