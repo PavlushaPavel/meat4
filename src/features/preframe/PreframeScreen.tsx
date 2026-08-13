@@ -6,6 +6,7 @@ import { calm, dur, ease, spring, stagger, tween } from '@/scene/motion';
 import { useVoice } from '@/scene/useVoice';
 import { useNav } from '@/router/useNav';
 import { env } from '@/lib/env';
+import { introAsset } from '@/ui/assets';
 import { AdConsole } from '@/ui/AdConsole';
 import { AuthorLine, AuthorNote } from '@/ui/AuthorNote';
 import { MetalPanel } from '@/ui/MetalPanel';
@@ -45,7 +46,18 @@ import { cn } from '@/lib/cn';
  */
 export function PreframeScreen() {
   const { next } = useNav();
-  const voice = useVoice(preframeBeats, env.VITE_VOICE_INTRO_URL);
+  /**
+   * Запись лежит в самой сборке, а переменная сборки её ПЕРЕКРЫВАЕТ.
+   *
+   * Голос — часть продукта, а не внешняя ссылка: он должен ехать вместе с
+   * приложением и работать без единой настройки. Переменная оставлена, чтобы
+   * подменить запись, не пересобирая проект, — например, выложить новую версию
+   * начитки и сравнить.
+   */
+  const voice = useVoice(
+    preframeBeats,
+    env.VITE_VOICE_INTRO_URL || introAsset('voice.m4a'),
+  );
   const cue = voice.run.current.cue;
 
   /**

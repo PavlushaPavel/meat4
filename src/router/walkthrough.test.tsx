@@ -298,25 +298,30 @@ describe('вход в город', () => {
    */
   it('кнопка воспроизведения запускает рассказ так же, как главное действие', async () => {
     render(<App />);
-    await press(playerUi.pendingAction);
+    await press(playerUi.play);
     expect(await screen.findByRole('button', { name: sceneUi.tapHint })).toBeTruthy();
   });
 
   /**
-   * Записи пока нет, и прибор обязан это говорить, а не делать вид. Полоса,
-   * бегущая по тишине, — та же ложь, что выдуманный таймкод на несуществующем
-   * видео (docs/SPEC.md §3.7). Перемотки в этом состоянии тоже нет: ползунок
-   * обещал бы возврат назад, которого без записи не существует.
+   * ОТКАЗ ЗВУКА НЕ ИМЕЕТ ПРАВА ВЕШАТЬ РАССКАЗ.
+   *
+   * С 13.08.2026 сцену ведёт голос: индекс такта считается от позиции в записи.
+   * Значит любой отказ — не доехал файл, не поддержан кодек, вкладка не дала
+   * звук — означал бы город, замерший на первом кадре навсегда. В тестовой среде
+   * звука нет вовсе, и это ровно тот случай: рассказ обязан идти дальше.
+   *
+   * Проверяется поведение, а не внутренний флаг: после нажатия человек может
+   * пройти сцену и уйти на следующий шаг.
    */
-  it('без записи честно сообщает об этом и всё равно пускает дальше', async () => {
+  it('идёт дальше, даже когда звука нет', async () => {
     render(<App />);
-    expect(screen.getAllByText(playerUi.pending).length).toBeGreaterThan(0);
-    expect(screen.queryByRole('slider')).toBeNull();
+    await press(playerUi.play);
 
-    await enterScene();
-    expect(useFunnel.getState().step).toBe(STEPS[0]);
-    expect(await screen.findByRole('button', { name: sceneUi.tapHint })).toBeTruthy();
+    await skipScene();
+    await press(preframe.cta);
+    expect(useFunnel.getState().step).toBe('conversion');
   });
+
 });
 
 describe('композиция сцены', () => {

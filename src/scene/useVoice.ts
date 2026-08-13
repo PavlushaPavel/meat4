@@ -51,7 +51,18 @@ export function useVoice<Cue extends string>(
   const audio = useRef<HTMLAudioElement | null>(null);
   const last = beats.length - 1;
 
-  const available = src !== '';
+  /**
+   * Запись не доехала или не проигрывается.
+   *
+   * ЗАЧЕМ ОТДЕЛЬНОЕ СОСТОЯНИЕ, А НЕ ПРОСТО «есть адрес». Файл может не
+   * загрузиться, кодек — не поддерживаться, вкладка — отказать в звуке. Раз
+   * сцену теперь ведёт голос, любой такой отказ означал бы, что город замер
+   * навсегда: таймера нет, метки не сработают, человек упрётся в первый кадр.
+   * Поэтому отказ переводит сцену обратно на таймер — воронка обязана
+   * проходиться при любом окружении (docs/SPEC.md §3.7).
+   */
+  const [failed, setFailed] = useState(false);
+  const available = src !== '' && !failed;
   /**
    * Метки времени есть у всех тактов или ни у одного. Половина расставленных
    * меток хуже, чем ни одной: часть сцены шла бы за голосом, часть за
@@ -121,14 +132,20 @@ export function useVoice<Cue extends string>(
       setDone(true);
     };
 
+    const onFail = () => setFailed(true);
+
     el.addEventListener('loadedmetadata', onMeta);
     el.addEventListener('timeupdate', onTime);
     el.addEventListener('ended', onEnd);
+    el.addEventListener('error', onFail);
+    el.addEventListener('stalled', onFail);
     return () => {
       el.pause();
       el.removeEventListener('loadedmetadata', onMeta);
       el.removeEventListener('timeupdate', onTime);
       el.removeEventListener('ended', onEnd);
+      el.removeEventListener('error', onFail);
+      el.removeEventListener('stalled', onFail);
       audio.current = null;
     };
   }, [available, beats, last, src, timed]);
@@ -136,11 +153,26 @@ export function useVoice<Cue extends string>(
   const start = useCallback(() => {
     setStarted(true);
     const el = audio.current;
-    if (!el) return;
+    if (!el) {
+      setFailed(true);
+      return;
+    }
     el.playbackRate = rate;
-    // Промах здесь не должен ломать воронку: не дали звук — сцена всё равно
-    // идёт, просто молча (docs/SPEC.md §3.7).
-    void el.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    void el
+      .play()
+      .then(() => setPlaying(true))
+      .catch(() => setFailed(true));
+
+    /**
+     * Сторож молчаливого отказа. Браузер умеет не бросать ошибку и при этом не
+     * играть — например, когда файл ещё тянется, а вкладка ушла в фон. Молча
+     * это выглядит как зависшая сцена, потому что такты ждут звука, которого
+     * нет. Не сдвинулась позиция за полторы секунды — уходим на таймер.
+     */
+    window.setTimeout(() => {
+      const now = audio.current;
+      if (!now || now.currentTime === 0) setFailed(true);
+    }, 1500);
   }, [rate]);
 
   const toggle = useCallback(() => {
