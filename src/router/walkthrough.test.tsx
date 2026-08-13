@@ -7,7 +7,7 @@ import { preframe, preframeBeats, conversion } from '@/content/preframe';
 import { LESSONS, LESSON_UI } from '@/content/lessons';
 import { audienceScene, bundleFinale } from '@/content/city';
 import { quizBank, quizCopy, LIVES } from '@/content/quiz';
-import { sceneUi, voiceUi } from '@/content/scene';
+import { playerUi, sceneUi } from '@/content/scene';
 import { ZONES } from '@/world';
 
 /**
@@ -52,14 +52,26 @@ async function skipScene() {
 const SKIP_LABEL = sceneUi.skip;
 
 /**
- * Войти в сцену через голосовое сообщение.
+ * Начать рассказ.
  *
- * Воронка начинается нажатием на воспроизведение, а не текстом. В тестах
- * окружение пустое, записи нет — кнопка честно предлагает начать без неё, и
- * это тот же путь, которым пойдёт человек, пока запись не смонтирована.
+ * ОТДЕЛЬНОГО ЭКРАНА ВХОДА БОЛЬШЕ НЕТ: первый кадр — уже сцена, но она стоит,
+ * пока человек не согласился слушать. Согласие даётся одним из двух способов —
+ * главным действием внизу или кнопкой воспроизведения на карточке голосового.
+ * Здесь жмём главное действие: это тот же путь, которым пойдёт человек.
  */
 async function enterScene() {
-  await press(voiceUi.pendingAction);
+  await press(preframe.voice.cta);
+}
+
+/**
+ * Перевести рассказ на следующий такт.
+ *
+ * Пузырь гида внизу — единственный видимый орган управления сценой и он же
+ * клавиатурный эквивалент тапа по афише. Нажатие на него делает ровно то же,
+ * что сделало бы ожидание таймера.
+ */
+async function nextBeat() {
+  await press(sceneUi.tapHint);
 }
 
 /**
@@ -107,32 +119,37 @@ describe('воронка при пустом окружении', () => {
   it('проходится целиком: от сообщения клиента до цены', async () => {
     render(<App />);
 
-    // --- Вход: воронка начинается с голосового, а не с текста ---
-    expect(screen.getByText(preframe.voice.title)).toBeTruthy();
+    // --- Вход: первый кадр это уже город, но рассказ ждёт согласия ---
+    /**
+     * Первая реплика на экране с самого начала — она часть афиши, а не
+     * результат нажатия. А вот рассказ стоит: продолжения на экране нет, пока
+     * человек не нажал.
+     */
+    expect(screen.getByText(preframeBeats[0].say[0])).toBeTruthy();
+    expect(screen.queryByRole('button', { name: sceneUi.tapHint })).toBeNull();
     await enterScene();
 
     // --- Шаг 1. Префрейм: город, кабинет и претензии клиента ---
     /**
-     * Подсказка про тап обязана быть на экране С ПЕРВОГО КАДРА. Сцена идёт
-     * сама и кнопок не показывает: без этой строки человек не может узнать,
-     * что темп в его руках, а догадаться неоткуда.
+     * Пузырь-продолжение обязан быть на экране С ПЕРВОГО ЖЕ ТАКТА. Сцена идёт
+     * сама, но темп в руках человека, и без единственного видимого органа
+     * управления догадаться об этом неоткуда.
      */
-    expect(screen.getByText(sceneUi.tapHint)).toBeTruthy();
+    expect(await screen.findByRole('button', { name: sceneUi.tapHint })).toBeTruthy();
 
     /**
-     * Претензия клиента обязана прийти В КАДР, а не только в лог реплик. Автор
-     * произносит её как чужую речь, и весь смысл такта в том, что человек
+     * Претензия клиента обязана прийти В ВИТРИНУ, а не только заголовком.
+     * Автор произносит её как чужую речь, и весь смысл такта в том, что человек
      * узнаёт СВОЮ переписку: пузырь мессенджера поверх города. Поэтому текст
-     * ищется дважды — пузырём в кадре и репликой в логе; одного вхождения
+     * ищется дважды — пузырём в кадре и репликой в тексте; одного вхождения
      * достаточно, чтобы кадр молча перестал показывать претензию.
      *
      * Номер такта не зашит: сценарий правится текстом, и такт с первой
-     * претензией опознаётся по ней самой. Тап делает ровно то же, что сделало
-     * бы ожидание таймера.
+     * претензией опознаётся по ней самой.
      */
     const firstClaim = preframeBeats.findIndex((b) => b.say[0] === preframe.claims[0]);
     expect(firstClaim).toBeGreaterThan(0);
-    for (let i = 0; i < firstClaim; i += 1) await press(sceneUi.tapAria);
+    for (let i = 0; i < firstClaim; i += 1) await nextBeat();
     await waitFor(() => expect(screen.getAllByText(preframe.claims[0]).length).toBe(2));
     await skipScene();
     await press(preframe.cta);
@@ -191,7 +208,7 @@ describe('воронка при пустом окружении', () => {
   }, 30_000);
 });
 
-describe('подсказка про тап', () => {
+describe('продолжение рассказа', () => {
   beforeEach(() => {
     cleanup();
     useFunnel.setState(useFunnel.getInitialState(), true);
@@ -199,33 +216,38 @@ describe('подсказка про тап', () => {
   });
 
   /**
-   * Подсказка учит ОДНОМУ жесту и обязана уйти. Оставшись до конца сцены, она
-   * из помощи превращается в мигающую строку поверх рассказа — а рассказ здесь
-   * и есть продукт. Проверяется поведение, а не число тактов: сколько именно их
-   * держать, решает `HINT_BEATS`, и менять его можно свободно.
+   * ПУЗЫРЬ ГИДА — ЕДИНСТВЕННЫЙ ВИДИМЫЙ ОРГАН УПРАВЛЕНИЯ РАССКАЗОМ, и он обязан
+   * стоять всё время, пока рассказ идёт. Раньше на его месте была подсказка про
+   * тап, которая учила жесту и уходила через два такта; в композиции-афише это
+   * больше не подсказка, а сама кнопка «дальше», и уйти она имеет право ровно
+   * один раз — когда сцена договорила и её место занимает главное действие.
+   *
+   * Проверяется поведение, а не число тактов: сколько именно их в сцене, решает
+   * сценарий, и менять его можно свободно.
    */
-  it('исчезает, когда жест уже понят', async () => {
+  it('живёт весь рассказ и уступает место главному действию', async () => {
     render(<App />);
     await enterScene();
-    expect(screen.getByText(sceneUi.tapHint)).toBeTruthy();
+    expect(await screen.findByRole('button', { name: sceneUi.tapHint })).toBeTruthy();
 
-    /**
-     * Три такта — заведомо больше, чем держится подсказка, и заведомо меньше
-     * пятнадцати тактов сцены. Опрашивать её присутствие в цикле нельзя:
-     * подсказка уходит с анимацией и ещё живёт в разметке, пока та идёт, —
-     * цикл успел бы протапать всю сцену и «доказать», что она не исчезает.
-     */
-    for (let i = 0; i < 3; i += 1) await press(sceneUi.tapAria);
-    await waitFor(() => expect(screen.queryByText(sceneUi.tapHint)).toBeNull());
-
-    // И ушла она посреди рассказа, а не вместе с его концом: сцена ещё идёт,
-    // главного действия на экране пока нет.
-    expect(screen.queryByRole('button', { name: preframe.cta })).toBeNull();
+    // Три такта — заведомо меньше, чем длится сцена, и заведомо больше, чем
+    // держалась прежняя подсказка.
+    for (let i = 0; i < 3; i += 1) await nextBeat();
     expect(preframeBeats.length).toBeGreaterThan(3);
+    expect(screen.getByRole('button', { name: sceneUi.tapHint })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: preframe.cta })).toBeNull();
+
+    // А договорив, сцена меняет продолжение на выход из неё. Ждём ухода, а не
+    // проверяем мгновенно: пузырь исчезает с анимацией и ещё живёт в разметке.
+    await skipScene();
+    expect(await screen.findByRole('button', { name: preframe.cta })).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: sceneUi.tapHint })).toBeNull(),
+    );
   });
 });
 
-describe('вход через голосовое', () => {
+describe('вход в город', () => {
   beforeEach(() => {
     cleanup();
     useFunnel.setState(useFunnel.getInitialState(), true);
@@ -233,48 +255,67 @@ describe('вход через голосовое', () => {
   });
 
   /**
-   * ВОРОНКА НАЧИНАЕТСЯ НАЖАТИЕМ, А НЕ ТЕКСТОМ. Это не украшение входа: пока
-   * человек не тронул воспроизведение, сцены не существует. Жест снимает и
-   * браузерный запрет на звук без действия, и вопрос «что тут делать» — вместо
-   * полутора минут текста, которые надо начать читать без всякой причины.
+   * РАССКАЗ НАЧИНАЕТСЯ НАЖАТИЕМ, НО ОТДЕЛЬНОГО ЭКРАНА ВХОДА НЕТ.
+   *
+   * Это прямая просьба заказчика: человек нажимает воспроизведение, и в этот
+   * момент оживает сам город, — а не «сначала чат, потом сцена». Поэтому первый
+   * кадр это уже афиша с первой репликой, и проверять здесь нужно ровно две
+   * вещи: без нажатия рассказ НЕ ИДЁТ, после нажатия идёт.
    */
-  it('до нажатия сцены нет, после — есть', async () => {
+  it('до нажатия рассказ стоит, после — идёт', async () => {
     render(<App />);
 
+    // Афиша на месте: первая реплика видна с самого начала.
+    expect(screen.getByText(preframeBeats[0].say[0])).toBeTruthy();
+
+    // Но дальше первого такта сцена не ушла: ни следующей реплики, ни
+    // продолжения, ни «пропустить».
+    expect(screen.queryByText(preframeBeats[1].say[0])).toBeNull();
+    expect(screen.queryByRole('button', { name: sceneUi.tapHint })).toBeNull();
+    expect(screen.queryByRole('button', { name: sceneUi.skip })).toBeNull();
+
     /**
-     * На входе лежит ОДНО сообщение и ничего больше. Претензии клиента звучат
-     * внутри записи и показываются сценой в момент, когда автор их произносит;
-     * выложенные ещё и на первый экран, они превращали бы вход в пересказ того,
-     * что человек через минуту услышит.
+     * Претензий клиента на первом кадре тоже нет. Они звучат ВНУТРИ записи и
+     * показываются в тот момент, когда автор их произносит; выложенные ещё и на
+     * вход, они превращали бы его в пересказ того, что человек через минуту
+     * услышит.
      */
-    expect(screen.getByText(preframe.voice.title)).toBeTruthy();
     for (const claim of preframe.claims) {
       expect(screen.queryByText(claim)).toBeNull();
     }
 
-    // А сцены нет: ни подсказки про тап, ни «пропустить», ни реплик автора.
-    expect(screen.queryByText(sceneUi.tapHint)).toBeNull();
-    expect(screen.queryByRole('button', { name: sceneUi.skip })).toBeNull();
-
     await enterScene();
 
-    expect(await screen.findByText(sceneUi.tapHint)).toBeTruthy();
+    expect(await screen.findByRole('button', { name: sceneUi.tapHint })).toBeTruthy();
     expect(await screen.findByRole('button', { name: sceneUi.skip })).toBeTruthy();
   });
 
   /**
-   * Записи пока нет, и пузырь обязан это говорить, а не делать вид. Полоса,
+   * У ВХОДА ДВЕ ДВЕРИ, И ОБЕ ВЕДУТ В ОДНО. Заказчик описал жест буквально: «он
+   * нажимает Play, и в этот момент сам город начинает оживать». Значит кнопка
+   * воспроизведения на карточке обязана запускать рассказ так же, как главное
+   * действие внизу, — иначе самый очевидный жест первого кадра не делает ничего.
+   */
+  it('кнопка воспроизведения запускает рассказ так же, как главное действие', async () => {
+    render(<App />);
+    await press(playerUi.pendingAction);
+    expect(await screen.findByRole('button', { name: sceneUi.tapHint })).toBeTruthy();
+  });
+
+  /**
+   * Записи пока нет, и прибор обязан это говорить, а не делать вид. Полоса,
    * бегущая по тишине, — та же ложь, что выдуманный таймкод на несуществующем
-   * видео (docs/SPEC.md §3.7).
+   * видео (docs/SPEC.md §3.7). Перемотки в этом состоянии тоже нет: ползунок
+   * обещал бы возврат назад, которого без записи не существует.
    */
   it('без записи честно сообщает об этом и всё равно пускает дальше', async () => {
     render(<App />);
-    expect(screen.getAllByText(voiceUi.pending).length).toBeGreaterThan(0);
-    expect(screen.queryByText(voiceUi.invite)).toBeNull();
+    expect(screen.getAllByText(playerUi.pending).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('slider')).toBeNull();
 
     await enterScene();
     expect(useFunnel.getState().step).toBe(STEPS[0]);
-    expect(await screen.findByText(sceneUi.tapHint)).toBeTruthy();
+    expect(await screen.findByRole('button', { name: sceneUi.tapHint })).toBeTruthy();
   });
 });
 
@@ -286,34 +327,42 @@ describe('композиция сцены', () => {
   });
 
   /**
-   * НОВОЕ СВЕРХУ — ГЛАВНОЕ РЕШЕНИЕ КОМПОЗИЦИИ, И ОНО ЛЕГКО ОТКАТЫВАЕТСЯ.
+   * ПЕРВАЯ СТРОКА ТАКТА — ЗАГОЛОВОК, ОСТАЛЬНЫЕ — ПОДСТРОЧНИК.
    *
-   * При хронологическом порядке текущая реплика уезжает всё ниже с каждым
-   * тактом: взгляду приходится догонять её по экрану, а к середине сцены она
-   * уходит за сгиб — ровно та поломка, из-за которой экран пересобирали.
-   * Обратный порядок держит её в одной точке, вплотную к кадру.
-   *
-   * Проверяется порядок в разметке, а не стили: подмена `flex-col-reverse` на
-   * `flex-col` или потеря `.reverse()` не видна ни типам, ни линту.
+   * На афише глаз ловит крупное первым, и первой строкой автор всегда
+   * произносит саму мысль. Разделения на два поля в такте нет — сценарий
+   * правится как речь, — поэтому роль строки решает разметка, и потерять это
+   * решение можно молча: текст останется на экране, просто перестанет быть
+   * заголовком.
    */
-  it('новая реплика стоит выше прошлой, а не под ней', async () => {
+  it('первая строка такта — заголовок, остальные — подстрочник', async () => {
+    render(<App />);
+    const [title, sub] = preframeBeats[0].say;
+    expect(sub).toBeTruthy();
+
+    expect(screen.getByRole('heading', { name: title })).toBeTruthy();
+    expect(screen.getByText(sub).tagName).toBe('P');
+  });
+
+  /**
+   * ЛОГА БОЛЬШЕ НЕТ: НА ЭКРАНЕ ТОЛЬКО ТЕКУЩАЯ РЕПЛИКА.
+   *
+   * Прежде сказанное копилось, потому что перемотки у сцены не было и упущенную
+   * фразу нельзя было вернуть никак. Теперь возврат живёт на дорожке плеера, а
+   * афиша показывает одну мысль за раз. Вернувшийся лог — это не украшение, а
+   * другая композиция: текст полез бы вверх на автора и на витрину такта.
+   */
+  it('прошлая реплика уходит с экрана, а не копится', async () => {
     render(<App />);
     await enterScene();
 
-    // Первые такты префрейма молчат — там говорит телефон, а не автор.
-    const spoken = preframeBeats.filter((b) => b.say.length > 0);
-    const [older, newer] = spoken;
-    expect(older && newer).toBeTruthy();
+    const [older, newer] = preframeBeats;
+    expect(screen.getByText(older.say[0])).toBeTruthy();
 
-    for (let i = 0; i < preframeBeats.indexOf(newer); i += 1) {
-      await press(sceneUi.tapAria);
-    }
+    await nextBeat();
 
-    const olderLine = await screen.findByText(older.say[0]);
-    const newerLine = await screen.findByText(newer.say[0]);
-
-    const order = Array.from(document.querySelectorAll<HTMLElement>('p'));
-    expect(order.indexOf(newerLine)).toBeLessThan(order.indexOf(olderLine));
+    expect(await screen.findByText(newer.say[0])).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText(older.say[0])).toBeNull());
   });
 });
 
@@ -349,29 +398,32 @@ describe('сброс прохода', () => {
    * остаётся досмотренной: такты проиграны, главное действие на месте. Кнопка
    * «начать сначала» при этом выглядит нажатой и не работающей.
    *
-   * Проверяем не внутренности, а то, что видит человек: после сброса сцена
-   * снова в начале — вернулась подсказка про тап, которая живёт только на
-   * первых тактах, и исчезло главное действие, появляющееся в конце сцены.
+   * Проверяем не внутренности, а то, что видит человек: после сброса рассказ
+   * снова ждёт согласия слушать, а главного действия, появляющегося в конце
+   * сцены, на экране нет.
    */
   it('перезапускает сцену, даже когда шаг не изменился', async () => {
     render(<App />);
     await enterScene();
     await skipScene();
 
-    // Сцена договорила: действие есть, подсказка ушла. Ждём её ухода, а не
-    // проверяем мгновенно: она исчезает с анимацией и ещё живёт в разметке,
+    // Сцена договорила: действие есть, продолжение ушло. Ждём его ухода, а не
+    // проверяем мгновенно: пузырь исчезает с анимацией и ещё живёт в разметке,
     // пока та идёт.
     await screen.findByRole('button', { name: preframe.cta });
-    await waitFor(() => expect(screen.queryByText(sceneUi.tapHint)).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: sceneUi.tapHint })).toBeNull(),
+    );
 
     await act(async () => {
       useFunnel.getState().reset();
     });
 
     expect(useFunnel.getState().step).toBe(STEPS[0]);
-    // Сброс возвращает и к голосовому: воронка начинается заново целиком.
+    // Сброс возвращает и к нажатию на воспроизведение: воронка начинается
+    // заново целиком, а не с середины досмотренной сцены.
     await enterScene();
-    expect(await screen.findByText(sceneUi.tapHint)).toBeTruthy();
+    expect(await screen.findByRole('button', { name: sceneUi.tapHint })).toBeTruthy();
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: preframe.cta })).toBeNull(),
     );

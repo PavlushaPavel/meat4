@@ -34,18 +34,31 @@ export function ConversionScreen() {
       total={conversionBeats.length}
       stage={<ConversionStage index={run.index} cue={run.current.cue} />}
       /*
-        Подъём и сама связка — единственные такты воронки, где смысл несёт
-        КАРТИНКА, а не реплика: человек должен увидеть цепочку целиком, вплоть
-        до продажи и денег, иначе показывать её незачем. На этих двух тактах
-        кадр забирает больше высоты, речь ужимается до пары строк и остаётся
-        доступной прокруткой.
+        ГОРОД МЕНЯЕТСЯ РОВНО ТАМ, ГДЕ КАМЕРА ИДЁТ ВВЕРХ. Пока речь о районах
+        трафика и дорогах — за спиной стоит кадр со всеми районами; на такте
+        подъёма фоном становится сам район конверсий. Это и есть жест сцены,
+        сделанный не схемой, а фотографией.
       */
-      stageTall={run.current.cue === 'rise' || run.current.cue === 'chain'}
+      city={RISEN.has(run.current.cue) ? 'city-2.webp' : 'city-1.webp'}
+      /*
+        ФИГУРЫ АВТОРА ЗДЕСЬ НЕТ, И ЭТО НЕ ЭКОНОМИЯ. Во вступлении говорит автор,
+        и он в кадре; здесь говорит сам город — сцена держится на одном движении
+        камеры, и связка из семи участков обязана занять всю ширину афиши.
+        Автор, стоящий слева, отобрал бы у неё треть кадра ради присутствия,
+        которого сцена не требует.
+      */
       cta={conversion.cta}
       onCta={next}
     />
   );
 }
+
+/**
+ * Такты, на которых камера уже поднялась выше кабинета. С них и до конца сцены
+ * фоном стоит район конверсий: обещание пути даётся картинкой раньше, чем
+ * кнопкой, и оно честное — это буквально следующее место воронки.
+ */
+const RISEN = new Set<ConversionCue>(['rise', 'chain', 'domino']);
 
 /** См. тот же приём в `PreframeScreen`: сколько тактов подсказки уже прошло. */
 function cueOrdinal(index: number, cue: ConversionCue): number {
@@ -84,7 +97,14 @@ function ConversionStage({ index, cue }: { index: number; cue: ConversionCue }) 
         animate={{ opacity: 1, y: 0 }}
         exit={reduceMotion ? undefined : { opacity: 0 }}
         transition={calm(reduceMotion, tween(dur.base))}
-        className="flex flex-col justify-end gap-3"
+        /*
+          СВОЯ ПЛОСКОСТЬ У ВИТРИНЫ ОБЯЗАТЕЛЬНА. Кадр города теперь идёт на весь
+          экран, и схема из тонких линий с подписями («АУДИТОРИЯ», «ОФФЕР»)
+          проходила то по тёмному небу, то по светящейся башне — контраст менялся
+          по буквам, участки связки не читались вовсе. Материал тот же, что у
+          витрин вступления и у карточки голосового: на афише плоскость одна.
+        */
+        className="flex w-full flex-col justify-end gap-3 rounded-panel border border-line bg-scene-deep/72 p-3 backdrop-blur-md"
       >
         {key === 'sources' && <SourcesScene wave={cueOrdinal(index, 'sources')} />}
         {key === 'roads' && <RoadsScene toClient={cue === 'client'} />}

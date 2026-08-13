@@ -1,19 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { preframe, preframeBeats, type PreframeCue } from '@/content/preframe';
 import { SceneShell } from '@/scene/SceneShell';
 import { calm, dur, ease, spring, stagger, tween } from '@/scene/motion';
 import { useVoice } from '@/scene/useVoice';
 import { useNav } from '@/router/useNav';
-import { VoiceIntro } from './VoiceIntro';
 import { env } from '@/lib/env';
 import { AdConsole } from '@/ui/AdConsole';
 import { AuthorLine, AuthorNote } from '@/ui/AuthorNote';
-import { LivingCity } from '@/ui/LivingCity';
 import { MetalPanel } from '@/ui/MetalPanel';
 import { Legend, Plate } from '@/ui/Plate';
 import { SourceGrid } from '@/ui/SourceGrid';
-import { introAsset } from '@/ui/assets';
 import { vibrate } from '@/lib/telegram';
 import { HOME_SOURCE, SOURCES, type SourceId } from '@/world';
 import { cn } from '@/lib/cn';
@@ -21,46 +18,141 @@ import { cn } from '@/lib/cn';
 /**
  * Состояние 1. Вход в Город трафика.
  *
- * ОДНА СЦЕНА НА ПОЛТОРЫ МИНУТЫ, И НИ ОДНОГО НАЖАТИЯ ВНУТРИ. Прежняя воронка
+ * ОДНА СЦЕНА НА ПОЛТОРЫ МИНУТЫ, И НИ ОДНОГО ЛИШНЕГО НАЖАТИЯ. Прежняя воронка
  * резала эту же мысль на девять экранов с кнопкой «дальше» под каждым; здесь
  * автор говорит, город иллюстрирует сказанное, а главное действие появляется
  * ровно один раз — когда сцена договорила (docs/SPEC.md §2.1).
  *
- * КАДРЫ ПЕРЕСОБРАНЫ 12.08.2026 ПОД НАСТОЯЩУЮ ЗАПИСЬ. Заказчик прислал сценарий
- * озвучки, и порядок событий в нём другой: город → кабинет → претензии клиента →
- * обвинение → автор → разница в чеке → соседние кабинеты → четыре вопроса →
- * цена услуги → «погнали». Прежние кадры (уведомление, отъезд камеры, вывеска в
- * финале) иллюстрировали текст, которого больше нет, и удалены целиком, а не
- * подогнаны: кадр, оставшийся от чужой реплики, врёт молча.
+ * ОТДЕЛЬНОГО ЭКРАНА ВХОДА БОЛЬШЕ НЕТ (13.08.2026). Был: сначала переписка с
+ * пришедшим голосовым, потом, после нажатия, город. Заказчик попросил ровно
+ * обратного — «он нажимает Play, и в этот момент сам город начинает оживать».
+ * Поэтому первый кадр — та же афиша, что и весь рассказ: город, автор в кадре,
+ * первая реплика и плеер на нуле. Согласие слушать по-прежнему обязательно, но
+ * оно даётся ВНУТРИ города, а не на подступах к нему (`SceneShell`).
  *
- * ПРАВИЛО КАДРА. Город показывает ТО ЖЕ, ЧТО СЛЫШНО, и ни на шаг вперёд. Ни один
- * кадр здесь не произносит фразу, которой нет в записи: всё, что человек
- * прочитает, приходит из `src/content/preframe.ts` и из карты мира
- * (`src/world.ts`). В компоненте нет ни одной строки копирайта — это канон
- * проекта, а не совпадение.
+ * КАДРЫ ПЕРЕСОБРАНЫ ПОД АФИШУ. Раньше каждый такт рисовал себе целую сцену:
+ * панораму города в рамке, портрет автора, вывеску над силуэтом. Теперь город
+ * стоит фоном на весь экран, а автор — вырезанной фигурой слева, и всё это
+ * задаётся ДВУМЯ полями (`city`, `figure`). Кадру такта остаётся витрина справа
+ * от автора — то, что город показывает прямо сейчас: окна кабинета, претензии
+ * клиента, связка. Дубли (кадр города внутри кадра города, второй портрет
+ * автора рядом с фигурой автора) убраны, а не ужаты.
+ *
+ * ПРАВИЛО КАДРА НЕ ИЗМЕНИЛОСЬ. Город показывает ТО ЖЕ, ЧТО СЛЫШНО, и ни на шаг
+ * вперёд. Ни один кадр здесь не произносит фразу, которой нет в записи: всё,
+ * что человек прочитает, приходит из `src/content/preframe.ts` и из карты мира
+ * (`src/world.ts`). В компоненте нет ни одной строки копирайта.
  */
 export function PreframeScreen() {
   const { next } = useNav();
   const voice = useVoice(preframeBeats, env.VITE_VOICE_INTRO_URL);
+  const cue = voice.run.current.cue;
 
   /**
-   * ВОРОНКА НАЧИНАЕТСЯ С НАЖАТИЯ, А НЕ С ТЕКСТА. Пока человек не тронул
-   * воспроизведение, сцены нет вовсе: на экране переписка с клиентом и
-   * пришедшее голосовое. Это первый осмысленный жест — им человек соглашается
-   * слушать, и он же снимает запрет браузера на звук без действия.
+   * ЧТО ЗА ЦИФРА СТОИТ В ПЛЕЕРЕ ДО ЗАПИСИ.
+   *
+   * Пока файла нет, длину брать неоткуда — и приложение НЕ ИМЕЕТ ПРАВА её
+   * придумать: выдуманный таймкод ничем не отличается от выдуманного CPL. Но и
+   * прочерк врал бы в другую сторону: хронометраж известен, его задал автор
+   * (`plannedDuration`). Появится файл — `duration` придёт из метаданных и
+   * вытеснит объявленное значение. Цифра всегда либо настоящая, либо названная
+   * автором.
    */
-  if (!voice.started) {
-    return <VoiceIntro voice={voice} />;
-  }
+  const duration = voice.duration > 0 ? voice.duration : preframe.voice.plannedDuration;
 
   return (
     <SceneShell
       run={voice.run}
       total={preframeBeats.length}
-      stage={<PreframeStage index={voice.run.index} cue={voice.run.current.cue} />}
+      voice={{
+        available: voice.available,
+        started: voice.started,
+        playing: voice.playing,
+        position: voice.position,
+        duration,
+        start: voice.start,
+        toggle: voice.toggle,
+        seek: voice.seek,
+      }}
+      startCta={preframe.voice.cta}
+      city={cityOf(cue)}
+      figure={figureOf(cue)}
+      stage={<PreframeStage index={voice.run.index} cue={cue} />}
       cta={preframe.cta}
       onCta={next}
     />
+  );
+}
+
+/**
+ * Какой кадр города стоит за рассказом.
+ *
+ * ГОРОД МЕНЯЕТСЯ ТРИЖДЫ ЗА ВСТУПЛЕНИЕ, И РОВНО НА ПОВОРОТАХ МЫСЛИ. Присланных
+ * кадров три, и они не взаимозаменяемы: на одном крупно стоит район Директа, на
+ * другом виден весь город с районами соседних систем, на третьем — район
+ * конверсий, куда ведёт следующий шаг воронки.
+ *
+ *  · пока речь о работе, претензиях и обвинении — человек внутри СВОЕГО района;
+ *  · когда автор говорит о разнице в чеке и о соседних кабинетах — камера видит
+ *    ВЕСЬ город: именно о нём и речь;
+ *  · на цене услуги и «погнали» — район конверсий на горизонте. Обещание пути
+ *    даётся картинкой раньше, чем кнопкой, и оно честное: это буквально
+ *    следующее место воронки.
+ */
+function cityOf(cue: PreframeCue): string {
+  if (cue === 'money' || cue === 'go') return 'city-2.webp';
+  if (cue === 'city' || cue === 'console' || cue === 'claim' || cue === 'blame') {
+    return 'city-3.webp';
+  }
+  return 'city-1.webp';
+}
+
+/**
+ * Какой из двух присланных портретов стоит в кадре.
+ *
+ * ФИГУРА ПОСТОЯННА ПОЧТИ ВЕСЬ РАССКАЗ, и это главное: автор ведёт экскурсию, а
+ * не появляется на пару тактов. Зовущий кадр (палец в камеру, колба в руке) и
+ * есть тот жест, которым он показывает город.
+ *
+ * ИСКЛЮЧЕНИЕ ОДНО — такт, где автор говорит о себе: «я хочу помочь тебе
+ * разобраться». Указующий палец поверх этой фразы читается как продажа, а не
+ * как предложение помощи, поэтому там стоит спокойный кадр с ноутбуком.
+ * Подмена фигуры на одной подсказке из десяти работает как смена плана в
+ * монтаже: её замечают ровно там, где она значит.
+ */
+function figureOf(cue: PreframeCue): string {
+  return cue === 'author' ? 'author-desk.webp' : 'author.webp';
+}
+
+/**
+ * Стекло витрины: подложка для всего, что на афише не имеет своей плоскости.
+ *
+ * ЗАЧЕМ ОНА НУЖНА, ХОТЯ РАНЬШЕ НЕ БЫЛА. Прежде витрина стояла в коробке на
+ * ровном фоне сцены, и текст на нём читался всегда. Теперь под ней идёт
+ * фотография ночного города с вывесками и фарами: та же строка проходит то по
+ * чёрному небу, то по светящейся вывеске, и контраст меняется по буквам.
+ * Проверено глазами — четыре вопроса связки и врезка автора над районом
+ * конверсий не читались вовсе.
+ *
+ * ФОРМА ВЗЯТА У КАРТОЧКИ ГОЛОСОВОГО И РАМЫ (`bg-scene-deep/…` плюс размытие):
+ * на афише все плоскости обязаны быть одного материала, иначе экран
+ * рассыпается на разностилевые наклейки. Панелям из металла подложка не нужна —
+ * у них своя плоскость.
+ */
+const GLASS = 'rounded-panel border border-line bg-scene-deep/72 backdrop-blur-md';
+
+/**
+ * Подпись прибора поверх города — та же подложка, но по размеру подписи.
+ * Тянуть под одну строку целую панель было бы тяжелее самой строки.
+ */
+function Caption({ children, tone }: { children: ReactNode; tone?: 'dim' | 'neon' }) {
+  return (
+    <Legend
+      tone={tone}
+      className="rounded-plate bg-scene-deep/72 px-2 py-1 text-right backdrop-blur-md"
+    >
+      {children}
+    </Legend>
   );
 }
 
@@ -81,6 +173,17 @@ function cueOrdinal(index: number, cue: PreframeCue): number {
   return Math.max(0, n);
 }
 
+/**
+ * Витрина такта.
+ *
+ * ВЫРАВНИВАНИЕ ПО ПРАВОМУ КРАЮ И ПО ВЕРХУ — не вкус, а следствие композиции:
+ * слева внизу стоит автор, а снизу текст. Свободен верхний правый угол афиши, и
+ * всё, что показывает город, живёт там.
+ *
+ * ПУСТАЯ ВИТРИНА — ЗАКОННОЕ СОСТОЯНИЕ. На последних тактах в кадре только автор,
+ * зовущий за собой, и город за его спиной; дорисовывать туда схему значило бы
+ * отвлекать от единственного, что в этот момент происходит.
+ */
 function PreframeStage({ index, cue }: { index: number; cue: PreframeCue }) {
   const reduceMotion = useReducedMotion();
 
@@ -88,16 +191,16 @@ function PreframeStage({ index, cue }: { index: number; cue: PreframeCue }) {
     <AnimatePresence mode="wait" initial={false}>
       <motion.div
         // Ключ — подсказка, а не номер такта: пока город показывает одно и то
-        // же, сцена не должна мигать на каждой реплике. Кабинет листает окна
+        // же, витрина не должна мигать на каждой реплике. Кабинет листает окна
         // семь тактов подряд и переживает их без единой перерисовки.
         key={cue}
         initial={reduceMotion ? false : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={reduceMotion ? undefined : { opacity: 0 }}
         transition={calm(reduceMotion, tween(dur.base))}
-        className="flex flex-col justify-end gap-3"
+        className="flex flex-col items-end gap-3"
       >
-        {cue === 'city' && <CityScene lit={cueOrdinal(index, 'city') > 0} />}
+        {cue === 'city' && <DistrictScene lit={cueOrdinal(index, 'city') > 0} />}
         {cue === 'console' && <ConsoleScene />}
         {cue === 'claim' && <ClaimScene shown={cueOrdinal(index, 'claim')} />}
         {cue === 'blame' && <BlameScene beat={cueOrdinal(index, 'blame')} />}
@@ -106,72 +209,52 @@ function PreframeStage({ index, cue }: { index: number; cue: PreframeCue }) {
         {cue === 'tools' && <ToolsScene alone={cueOrdinal(index, 'tools') > 0} />}
         {cue === 'wider' && <WiderScene beat={cueOrdinal(index, 'wider')} />}
         {cue === 'money' && <MoneyScene raised={cueOrdinal(index, 'money') > 0} />}
-        {cue === 'go' && <GoScene ready={cueOrdinal(index, 'go') > 0} />}
       </motion.div>
     </AnimatePresence>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Такт 1–2. Панорама города и вывеска района героя
+// Такт 1–2. Район, с которого всё начинается
 // ---------------------------------------------------------------------------
 
 /**
- * Город и район, с которого всё начинается.
+ * Вывеска района героя.
  *
- * ДВА СОБЫТИЯ В ОДНОМ КАДРЕ, ПОТОМУ ЧТО ИХ ДВА В ЗАПИСИ. Сначала «добро
- * пожаловать в Город трафика» — панорама и ничего больше; тактом позже «один
- * район ты уже знаешь» — и вывеска зажигается. Показать вывеску сразу значило бы
- * ответить на вопрос до того, как он прозвучал.
+ * ПАНОРАМЫ ЗДЕСЬ БОЛЬШЕ НЕТ, И ЭТО НЕ ПОТЕРЯ. Раньше такт рисовал кадр города в
+ * рамке; теперь город и так стоит на весь экран за спиной автора — рамка внутри
+ * него была бы кадром внутри кадра. Осталось ровно то, чего в фоне нет: имя
+ * района, зажигающееся тогда, когда его называют вслух.
  *
- * ПАНОРАМА — ПРИСЛАННЫЙ КАДР, А НЕ РИСОВАННЫЙ СИЛУЭТ. На фотографии заказчика
- * район Директа стоит на переднем плане и подписан кириллицей; собранный из
- * блоков горизонт рядом с ней читался бы как черновик. Кадр живёт через
- * `LivingCity`: медленный наезд и огни на трассах, то есть город работает, а не
- * лежит обоями.
+ * ЗАЖИГАЕТСЯ СО ВТОРОГО ТАКТА. Сначала «добро пожаловать в Город трафика» —
+ * панорама и ничего больше; тактом позже «один район ты уже знаешь». Показать
+ * вывеску сразу значило бы ответить на вопрос до того, как он прозвучал.
  *
  * Имя района берётся из `HOME_SOURCE`: район — это карта мира, и второй
  * экземпляр его названия однажды разъедется с первым. Светится он законно —
  * рекламный кабинет был у человека всегда, `zoneState('traffic')` здесь `open`.
  */
-function CityScene({ lit }: { lit: boolean }) {
+function DistrictScene({ lit }: { lit: boolean }) {
   const reduceMotion = useReducedMotion();
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="relative h-36 w-full overflow-hidden rounded-panel border border-line bg-scene-deep">
-        <LivingCity file="city-3.webp" />
-      </div>
-
-      {/*
-        Место под вывеску занято с первого такта, хотя видно её только со
-        второго: иначе кадр подпрыгивал бы на полсотни пикселей ровно в тот
-        момент, когда человек читает реплику под ним.
-      */}
-      <motion.div
-        initial={false}
-        // Неон включается не плавно, а с перебоем: так зажигается вывеска.
-        animate={reduceMotion || !lit ? { opacity: lit ? 1 : 0 } : { opacity: [0, 1, 0.3, 1] }}
-        transition={calm(reduceMotion, {
-          ...tween(dur.epic, ease.out),
-          times: [0, 0.4, 0.6, 1],
-        })}
-      >
-        <MetalPanel className="px-4 py-2.5">
-          <span className="neon-ink font-display text-lg font-semibold uppercase tracking-wide">
-            {HOME_SOURCE.name}
-          </span>
-        </MetalPanel>
-      </motion.div>
-
-      <motion.div
-        initial={false}
-        animate={{ opacity: lit ? 1 : 0 }}
-        transition={calm(reduceMotion, tween(dur.screen))}
-      >
-        <Legend>{preframe.district}</Legend>
-      </motion.div>
-    </div>
+    <motion.div
+      initial={false}
+      // Неон включается не плавно, а с перебоем: так зажигается вывеска.
+      animate={reduceMotion || !lit ? { opacity: lit ? 1 : 0 } : { opacity: [0, 1, 0.3, 1] }}
+      transition={calm(reduceMotion, {
+        ...tween(dur.epic, ease.out),
+        times: [0, 0.4, 0.6, 1],
+      })}
+      className="flex flex-col items-end gap-2"
+    >
+      <MetalPanel className="px-4 py-2.5">
+        <span className="neon-ink font-display text-lg font-semibold uppercase tracking-wide">
+          {HOME_SOURCE.name}
+        </span>
+      </MetalPanel>
+      <Caption>{preframe.district}</Caption>
+    </motion.div>
   );
 }
 
@@ -186,13 +269,13 @@ function CityScene({ lit }: { lit: boolean }) {
  * кампаниями, чистишь запросы и площадки» — обычная неделя. Потом приходит
  * претензия клиента, и человек ОТКРЫВАЕТ ТОТ ЖЕ КАБИНЕТ ЗАНОВО, чтобы
  * перепроверить всё то же самое. Между ними стоит подсказка `claim`, поэтому
- * кадр честно перемонтируется и окна начинают листаться с первого — ровно как
- * заново открытый кабинет.
+ * витрина честно перемонтируется и окна начинают листаться с первого — ровно
+ * как заново открытый кабинет.
  *
  * Подписи здесь нет: всё, что можно сказать словами, сказано голосом рядом.
  */
 function ConsoleScene() {
-  return <AdConsole windows={preframe.console} />;
+  return <AdConsole windows={preframe.console} className="w-full" />;
 }
 
 // ---------------------------------------------------------------------------
@@ -208,6 +291,10 @@ const BUZZ = [18, 70, 26];
  * ПО ОДНОЙ, А НЕ СПИСКОМ. Автор произносит их подряд как чужую речь, и вся их
  * сила в накоплении: первая — рабочий момент, третья — уже приговор. Выложенные
  * разом, они превращаются в перечень претензий из методички.
+ *
+ * ПУЗЫРИ ПРИЖАТЫ ВПРАВО, а хвостик у них левый: это входящие сообщения, но
+ * висят они в правом верхнем углу афиши, потому что левый занят автором. Форма
+ * пузыря говорит «чужая речь» сильнее, чем сторона экрана.
  *
  * ТОЧКИ «ПЕЧАТАЕТ» СТОЯТ МЕЖДУ ПУЗЫРЯМИ, а не только перед первым: пока клиент
  * не договорил, кадр обязан показывать, что сейчас прилетит ещё. После третьей
@@ -229,7 +316,7 @@ function ClaimScene({ shown }: { shown: number }) {
   }, [shown]);
 
   return (
-    <div className="flex flex-col items-start gap-2">
+    <div className="flex flex-col items-end gap-2">
       {preframe.claims.slice(0, shown).map((claim) => (
         <motion.p
           key={claim}
@@ -240,7 +327,7 @@ function ClaimScene({ shown }: { shown: number }) {
             scale: spring.land,
             opacity: tween(dur.press),
           })}
-          className="max-w-[88%] rounded-2xl rounded-tl-sm bg-tg-in px-3.5 py-2.5 text-small leading-relaxed text-tg-ink shadow-[0_18px_40px_-16px_#000]"
+          className="rounded-2xl rounded-tl-sm bg-tg-in px-3.5 py-2.5 text-small leading-relaxed text-tg-ink shadow-[0_18px_40px_-16px_#000]"
         >
           {claim}
         </motion.p>
@@ -319,7 +406,7 @@ function BlameScene({ beat }: { beat: number }) {
   const gone = beat >= AIMS.length;
 
   return (
-    <div className="relative h-40 w-full">
+    <div className="relative aspect-[2/1] w-full">
       <svg
         viewBox="0 0 320 160"
         aria-hidden="true"
@@ -362,38 +449,21 @@ function BlameScene({ beat }: { beat: number }) {
 }
 
 // ---------------------------------------------------------------------------
-// Такт 21–22. Автор появляется персонажем
+// Такт 21–22. Автор говорит о себе
 // ---------------------------------------------------------------------------
 
 /**
- * Автор входит в кадр.
+ * Врезка автора.
  *
- * ЗДЕСЬ ОН СПОКОЙНЫЙ, А НЕ ЗОВУЩИЙ. Присланных портрета два: на одном автор
- * показывает пальцем в камеру, на другом стоит с ноутбуком и просто смотрит.
- * Реплика этого такта — «я хочу помочь тебе разобраться», и указующий палец
- * поверх неё читался бы как продажа, а не как предложение помощи. Зовущий кадр
- * приберегли до «погнали», где он и есть жест.
- *
- * Врезка `AuthorNote` — та же форма, которой автор говорит во всей воронке:
- * увидел кромку и уже знаешь, кто говорит.
+ * ПОРТРЕТА ЗДЕСЬ БОЛЬШЕ НЕТ: автор и так стоит в кадре во весь рост всю сцену.
+ * Второе его изображение рядом с первым читалось бы как двойник. Осталась
+ * врезка — та же форма, которой автор говорит во всей воронке: увидел кромку и
+ * уже знаешь, кто говорит. На этом такте меняется сама фигура (см. `figureOf`),
+ * и врезка объясняет, почему она сменилась.
  */
 function AuthorScene() {
-  const reduceMotion = useReducedMotion();
-
   return (
-    <div className="flex flex-col gap-3">
-      <div className="relative h-36">
-        <motion.img
-          src={introAsset('author-desk.webp')}
-          alt=""
-          aria-hidden="true"
-          initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={calm(reduceMotion, tween(dur.screen))}
-          className="absolute bottom-0 left-1/2 h-36 -translate-x-1/2 object-contain object-bottom drop-shadow-[0_12px_28px_rgba(0,0,0,0.6)]"
-        />
-      </div>
-
+    <div className={cn(GLASS, 'w-full p-3')}>
       <AuthorNote>
         <AuthorLine>{preframe.authorNote}</AuthorLine>
       </AuthorNote>
@@ -424,7 +494,7 @@ function GapScene({ beat }: { beat: number }) {
   const paid = beat > 0;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex w-full flex-col gap-2">
       <div className="grid grid-cols-2 gap-2">
         <SpecialistPanel fee={left.fee} caption={left.caption} shown={paid} />
         <SpecialistPanel fee={right.fee} caption={right.caption} shown={paid} lit={paid} />
@@ -434,8 +504,9 @@ function GapScene({ beat }: { beat: number }) {
         initial={false}
         animate={{ opacity: beat > 1 ? 1 : 0 }}
         transition={calm(reduceMotion, tween(dur.screen))}
+        className="self-end"
       >
-        <Legend className="text-center">{note}</Legend>
+        <Caption>{note}</Caption>
       </motion.div>
     </div>
   );
@@ -464,18 +535,18 @@ function SpecialistPanel({
   const reduceMotion = useReducedMotion();
 
   return (
-    <MetalPanel className="flex flex-col items-center gap-2 p-3">
+    <MetalPanel className="flex flex-col items-center gap-1.5 p-2.5">
       <span aria-hidden="true" className="flex flex-col items-center gap-1">
         <span
           className={cn(
-            'size-4 rounded-full transition-colors',
+            'size-3.5 rounded-full transition-colors',
             lit ? 'bg-neon-dim' : 'bg-metal-hi',
           )}
           style={{ transitionDuration: `${dur.screen}s` }}
         />
         <span
           className={cn(
-            'h-5 w-9 rounded-t-full transition-colors',
+            'h-4 w-8 rounded-t-full transition-colors',
             lit ? 'bg-neon-dim' : 'bg-metal-hi',
           )}
           style={{ transitionDuration: `${dur.screen}s` }}
@@ -524,7 +595,7 @@ const HOME_ONLY: readonly SourceId[] = [HOME_SOURCE.id];
  * в ребус, который человек будет разгадывать вместо того, чтобы слушать.
  */
 function ToolsScene({ alone }: { alone: boolean }) {
-  return <SourceGrid lit={alone ? HOME_ONLY : ALL_SOURCES} />;
+  return <SourceGrid lit={alone ? HOME_ONLY : ALL_SOURCES} className="w-full" />;
 }
 
 // ---------------------------------------------------------------------------
@@ -565,18 +636,18 @@ function WiderScene({ beat }: { beat: number }) {
   const linked = beat >= 6;
 
   return (
-    <div className="relative flex flex-col gap-2.5 pl-5">
+    <div className={cn(GLASS, 'relative flex w-full flex-col gap-2 py-3 pl-6 pr-3')}>
       <span
         aria-hidden="true"
         className={cn(
-          'absolute bottom-2 left-1 top-2 w-px transition-colors',
+          'absolute bottom-3 left-3 top-3 w-px transition-colors',
           linked ? 'bg-neon' : 'bg-line',
         )}
         style={{ transitionDuration: `${dur.screen}s` }}
       />
 
       {preframe.wider.map((question, i) => (
-        <div key={question} className="flex items-center gap-3">
+        <div key={question} className="flex items-baseline gap-2.5">
           <Legend tone={i < asked ? 'neon' : 'dim'}>{String(i + 1).padStart(2, '0')}</Legend>
           {i < asked ? (
             <motion.p
@@ -595,7 +666,7 @@ function WiderScene({ beat }: { beat: number }) {
           ) : (
             // Место занято, ответа нет. Прочерк — это «здесь будет вопрос», а
             // пустота была бы «здесь ничего нет».
-            <span aria-hidden="true" className="h-px w-16 bg-line" />
+            <span aria-hidden="true" className="h-px w-12 bg-line" />
           )}
         </div>
       ))}
@@ -611,7 +682,7 @@ function WiderScene({ beat }: { beat: number }) {
  * Одно крупное утверждение: чек за работу.
  *
  * ЗДЕСЬ НЕТ И НЕ МОЖЕТ БЫТЬ ФРАЗЫ. Реплика «меняется то, какую услугу ты можешь
- * продавать и сколько она может стоить» звучит в логе рядом; повторить её
+ * продавать и сколько она может стоить» звучит рядом заголовком; повторить её
  * крупным шрифтом значило бы объяснить картинкой то, что уже сказано словами.
  * Поэтому кадр не пересказывает реплику, а ПОКАЗЫВАЕТ ЕЁ ПРЕДМЕТ: та же пара
  * чисел из `preframe.gap`, но теперь это не двое чужих людей, а один человек
@@ -625,72 +696,26 @@ function MoneyScene({ raised }: { raised: boolean }) {
   const side = raised ? preframe.gap.right : preframe.gap.left;
 
   return (
-    <div className="flex justify-center">
-      {/*
-        Кромка панели не загорается, хотя соблазн есть: свет здесь несёт САМО
-        ЧИСЛО, и вторая светящаяся деталь рядом отобрала бы у него событие.
-      */}
-      <MetalPanel className="flex min-w-[70%] flex-col items-center gap-2 px-6 py-5">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.span
-            key={side.fee}
-            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={reduceMotion ? undefined : { opacity: 0 }}
-            transition={calm(reduceMotion, spring.land)}
-            className={cn(
-              'font-display text-title font-semibold',
-              raised ? 'neon-ink' : 'text-ink',
-            )}
-          >
-            {side.fee}
-          </motion.span>
-        </AnimatePresence>
+    <MetalPanel className="flex flex-col items-center gap-2 px-5 py-4">
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={side.fee}
+          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={reduceMotion ? undefined : { opacity: 0 }}
+          transition={calm(reduceMotion, spring.land)}
+          className={cn(
+            'font-display text-title font-semibold',
+            raised ? 'neon-ink' : 'text-ink',
+          )}
+        >
+          {side.fee}
+        </motion.span>
+      </AnimatePresence>
 
-        <Legend tone={raised ? 'neon' : 'dim'} className="text-center">
-          {side.caption}
-        </Legend>
-      </MetalPanel>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Такт 37–38. Интересно? Погнали.
-// ---------------------------------------------------------------------------
-
-/**
- * Автор на фоне города.
- *
- * ГОРОД ЗДЕСЬ УЖЕ ДРУГОЙ: кадр с районом конверсий на горизонте — тем самым,
- * куда ведёт следующий экран. Обещание пути даётся картинкой раньше, чем
- * кнопкой, и оно честное: это буквально следующее место воронки.
- *
- * И портрет здесь зовущий — тот, где автор показывает пальцем в камеру. На
- * «погнали» это не украшение, а сам жест; на такте про помощь он был бы
- * навязчивостью, поэтому там стоит спокойный кадр.
- */
-function GoScene({ ready }: { ready: boolean }) {
-  const reduceMotion = useReducedMotion();
-
-  return (
-    <div
-      className={cn(
-        'relative h-48 w-full overflow-hidden rounded-panel border border-line bg-scene-deep transition-shadow',
-        ready && 'neon-edge',
-      )}
-      style={{ transitionDuration: `${dur.screen}s` }}
-    >
-      <LivingCity file="city-2.webp" className="opacity-70" />
-      <motion.img
-        src={introAsset('author.webp')}
-        alt=""
-        aria-hidden="true"
-        initial={reduceMotion ? false : { opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={calm(reduceMotion, tween(dur.screen))}
-        className="absolute bottom-0 left-1/2 h-44 -translate-x-1/2 object-contain object-bottom drop-shadow-[0_16px_32px_rgba(0,0,0,0.7)]"
-      />
-    </div>
+      <Legend tone={raised ? 'neon' : 'dim'} className="text-center">
+        {side.caption}
+      </Legend>
+    </MetalPanel>
   );
 }
