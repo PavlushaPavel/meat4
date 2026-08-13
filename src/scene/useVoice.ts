@@ -41,6 +41,33 @@ export interface VoiceRun<Cue extends string> {
   seek: (ratio: number) => void;
 }
 
+/**
+ * Запустить воспроизведение, не полагаясь на обещание.
+ *
+ * `play()` ВОЗВРАЩАЕТ ПРОМИС НЕ ВЕЗДЕ. В современных браузерах — да, но в старых
+ * вебвью и в тестовой среде он отдаёт `undefined`, и обращение к `.then`
+ * роняет обработчик нажатия. Для мини-аппа это не теория: он живёт внутри
+ * чужого клиента, и версия вебвью там не наша.
+ *
+ * @param onFail вызывается, когда браузер отказал в звуке
+ */
+function playSafely(el: HTMLAudioElement, onPlaying: () => void, onFail: () => void) {
+  let started: unknown;
+  try {
+    started = el.play();
+  } catch {
+    onFail();
+    return;
+  }
+  if (started && typeof (started as Promise<void>).then === 'function') {
+    void (started as Promise<void>).then(onPlaying).catch(onFail);
+    return;
+  }
+  // Обещания нет — судить об успехе можно только по самому элементу.
+  if (el.paused) onFail();
+  else onPlaying();
+}
+
 const RATES = [1, 1.5, 2] as const;
 
 export function useVoice<Cue extends string>(
@@ -158,10 +185,7 @@ export function useVoice<Cue extends string>(
       return;
     }
     el.playbackRate = rate;
-    void el
-      .play()
-      .then(() => setPlaying(true))
-      .catch(() => setFailed(true));
+    playSafely(el, () => setPlaying(true), () => setFailed(true));
 
     /**
      * Сторож молчаливого отказа. Браузер умеет не бросать ошибку и при этом не
@@ -179,7 +203,7 @@ export function useVoice<Cue extends string>(
     const el = audio.current;
     if (!el) return;
     if (el.paused) {
-      void el.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+      playSafely(el, () => setPlaying(true), () => setPlaying(false));
     } else {
       el.pause();
       setPlaying(false);
