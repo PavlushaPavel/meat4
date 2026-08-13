@@ -112,6 +112,15 @@ export interface SceneVoice {
   start: () => void;
   toggle: () => void;
   seek: (ratio: number) => void;
+  /**
+   * Скорость и переключатель по кругу.
+   *
+   * Почти три минуты голоса на входе слушают по-разному: кто уже поймал мысль,
+   * ускорится вместо того, чтобы бросить. Поле обязательное — сцена с записью
+   * без выбора скорости это недоделка, а не вариант.
+   */
+  rate: number;
+  cycleRate: () => void;
 }
 
 /**
@@ -265,6 +274,8 @@ export function SceneShell<Cue extends string>(props: SceneShellProps<Cue>) {
                 */
                 onToggle={waiting ? voice.start : voice.toggle}
                 onSeek={voice.seek}
+                rate={voice.rate}
+                onRate={voice.cycleRate}
               />
             </div>
           )}

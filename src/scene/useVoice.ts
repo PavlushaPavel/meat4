@@ -117,13 +117,32 @@ export function useVoice<Cue extends string>(
   const indexRef = useRef(index);
   indexRef.current = index;
 
+  /**
+   * Следующий такт.
+   *
+   * КОГДА РАССКАЗ ВЕДЁТ ГОЛОС, ТАП ДВИГАЕТ ЗАПИСЬ, А НЕ ИНДЕКС. Иначе текст
+   * уезжает вперёд, а звук остаётся на месте: человек читает одно, слышит
+   * другое, и чем больше тапов, тем сильнее расхождение. Индекс здесь вообще не
+   * трогается — он подтянется сам, потому что считается от позиции в записи.
+   *
+   * Без записи (или когда она отказала) работает прежний путь: индекс на шаг
+   * вперёд, дальше время держит таймер.
+   */
   const advance = useCallback(() => {
     if (indexRef.current >= last) {
       setDone(true);
       return;
     }
-    setIndex((i) => Math.min(last, i + 1));
-  }, [last]);
+    const next = Math.min(last, indexRef.current + 1);
+    const el = audio.current;
+    const mark = beats[next].at;
+
+    if (available && timed && el && typeof mark === 'number') {
+      el.currentTime = mark;
+      return;
+    }
+    setIndex(next);
+  }, [available, beats, last, timed]);
 
   const byTimer = !available || !timed;
 

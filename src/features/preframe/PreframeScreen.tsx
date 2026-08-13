@@ -82,6 +82,8 @@ export function PreframeScreen() {
         playing: voice.playing,
         position: voice.position,
         duration,
+        rate: voice.rate,
+        cycleRate: voice.cycleRate,
         start: voice.start,
         toggle: voice.toggle,
         seek: voice.seek,
@@ -647,6 +649,21 @@ function WiderScene({ beat }: { beat: number }) {
   const asked = askedBy(beat);
   const linked = beat >= 6;
 
+  /**
+   * ПОКА НИ ОДИН ВОПРОС НЕ НАЗВАН, КАДРА НЕТ ВОВСЕ.
+   *
+   * Здесь стояла стойка с четырьмя номерами и прочерками вместо ответов —
+   * задумывалось как «место занято, ответ впереди». На деле это четыре такта
+   * подряд, около двадцати секунд, в которые человек смотрит на «01 — 02 — 03 —
+   * 04 —» и больше ни на что: пустой прибор читается как недогруженный экран, а
+   * не как обещание. Заказчик так это и прочёл.
+   *
+   * Теперь стойка появляется вместе с первым названным вопросом и растёт по
+   * мере рассказа, а до этого кадр отдан городу — речь в эти такты и так несёт
+   * всё сама.
+   */
+  if (asked === 0) return null;
+
   return (
     <div className={cn(GLASS, 'relative flex w-full flex-col gap-2 py-3 pl-6 pr-3')}>
       <span
@@ -658,28 +675,22 @@ function WiderScene({ beat }: { beat: number }) {
         style={{ transitionDuration: `${dur.screen}s` }}
       />
 
-      {preframe.wider.map((question, i) => (
+      {preframe.wider.slice(0, asked).map((question, i) => (
         <div key={question} className="flex items-baseline gap-2.5">
-          <Legend tone={i < asked ? 'neon' : 'dim'}>{String(i + 1).padStart(2, '0')}</Legend>
-          {i < asked ? (
-            <motion.p
-              initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={calm(reduceMotion, {
-                ...tween(dur.base),
-                // Вопросы называют парами, и внутри пары второй отстаёт на шаг
-                // выкладки: так читается «и ещё вот это», а не «оба сразу».
-                delay: (i % 2) * stagger.list,
-              })}
-              className="text-small text-ink"
-            >
-              {question}
-            </motion.p>
-          ) : (
-            // Место занято, ответа нет. Прочерк — это «здесь будет вопрос», а
-            // пустота была бы «здесь ничего нет».
-            <span aria-hidden="true" className="h-px w-12 bg-line" />
-          )}
+          <Legend tone="neon">{String(i + 1).padStart(2, '0')}</Legend>
+          <motion.p
+            initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={calm(reduceMotion, {
+              ...tween(dur.base),
+              // Вопросы называют парами, и внутри пары второй отстаёт на шаг
+              // выкладки: так читается «и ещё вот это», а не «оба сразу».
+              delay: (i % 2) * stagger.list,
+            })}
+            className="text-small text-ink"
+          >
+            {question}
+          </motion.p>
         </div>
       ))}
     </div>

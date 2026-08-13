@@ -65,6 +65,8 @@ export function VoicePlayer({
   duration,
   onToggle,
   onSeek,
+  rate,
+  onRate,
   className,
 }: {
   /** Запись подключена. Ложь — прибор показывает объявленный хронометраж и не бежит. */
@@ -78,6 +80,9 @@ export function VoicePlayer({
   onToggle: () => void;
   /** Перемотка, 0…1. Без записи не вызывается никогда. */
   onSeek?: (ratio: number) => void;
+  /** Текущая скорость и переключатель по кругу: 1 → 1,5 → 2. */
+  rate?: number;
+  onRate?: () => void;
   className?: string;
 }) {
   const reduceMotion = useReducedMotion();
@@ -160,9 +165,30 @@ export function VoicePlayer({
           справа остаётся — он настоящий, его знает сценарий.
         */}
         {available ? (
-          <span className="ml-auto font-display text-small tabular-nums text-ink-dim">
-            <span className="text-hazard">{clock(position)}</span> / {clock(duration)}
-          </span>
+          <>
+            {/*
+              СКОРОСТЬ — ТАМ ЖЕ, ГДЕ В МЕССЕНДЖЕРЕ, и по той же причине: почти
+              три минуты голоса на входе слушают по-разному. Кто уже понял мысль,
+              ускоряется вместо того, чтобы бросить; кто слушает на ходу —
+              оставляет как есть. Переключение по кругу, а не список: выбор из
+              трёх значений не заслуживает отдельного меню.
+            */}
+            {onRate && rate ? (
+              <button
+                type="button"
+                onClick={onRate}
+                aria-label={playerUi.rateAria}
+                className="legend min-h-9 rounded-plate border border-line px-2.5 text-ink-dim transition-colors duration-150 active:bg-ink/10"
+              >
+                {formatRate(rate)}
+              </button>
+            ) : (
+              <span />
+            )}
+            <span className="font-display text-small tabular-nums text-ink-dim">
+              <span className="text-hazard">{clock(position)}</span> / {clock(duration)}
+            </span>
+          </>
         ) : (
           <>
             <span className="legend text-ink-dim">{playerUi.pending}</span>
@@ -177,6 +203,11 @@ export function VoicePlayer({
 }
 
 /** Время в записи: М:СС. Пока метаданных нет, показывать нечего. */
+/** Скорость в подписи кнопки: 1× / 1,5× / 2×. Запятая, а не точка — по-русски. */
+function formatRate(rate: number): string {
+  return `${String(rate).replace('.', ',')}×`;
+}
+
 function clock(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds <= 0) return '0:00';
   const total = Math.floor(seconds);
