@@ -141,6 +141,14 @@ type SceneShellProps<Cue extends string> = {
   /** Витрина: то, что город показывает на текущем такте. */
   stage: ReactNode;
   /**
+   * Полноэкранный слой ЗА фигурой автора.
+   *
+   * Витрина живёт в окне и по построению ограничена его краями. Всё, что должно
+   * забрать экран целиком, окном обойтись не может — для этого и заведён
+   * отдельный слой.
+   */
+  backdrop?: ReactNode;
+  /**
    * Кадр города на весь экран (`public/intro/`). Без него афиша ложится на
    * сценографию шага из `CityStage` — так живут сцены, у которых своего города
    * нет (карта связки, например).
@@ -155,7 +163,8 @@ type SceneShellProps<Cue extends string> = {
 } & VoiceProps;
 
 export function SceneShell<Cue extends string>(props: SceneShellProps<Cue>) {
-  const { run, total, stage, city, figure, cta, onCta, voice, startCta, className } = props;
+  const { run, total, stage, backdrop, city, figure, cta, onCta, voice, startCta, className } =
+    props;
   const reduceMotion = useReducedMotion();
   const { index, current, said, done, advance, finish } = run;
 
@@ -219,6 +228,15 @@ export function SceneShell<Cue extends string>(props: SceneShellProps<Cue>) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/*
+        ЗАДНИК — полноэкранный слой между городом и автором.
+        Витрина такта живёт в окне и по построению ограничена его краями; всё,
+        что должно ЗАБРАТЬ ЭКРАН, окном обойтись не может. Отсюда отдельный
+        слой: он лежит за фигурой, поэтому растущее на нём не закрывает автора,
+        и под затемнением, поэтому не спорит с текстом.
+      */}
+      {backdrop}
 
       <StageLayer narrow={Boolean(figure)}>{stage}</StageLayer>
       <Figure file={figure} />

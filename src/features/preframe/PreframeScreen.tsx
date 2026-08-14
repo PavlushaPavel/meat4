@@ -92,6 +92,16 @@ export function PreframeScreen() {
       city={cityOf(cue)}
       figure={figureOf(cue)}
       stage={<PreframeStage index={voice.run.index} cue={cue} />}
+      /*
+        Приговор живёт НЕ в витрине, а на заднике во весь экран: в окне он
+        упёрся бы в край на втором же повторе, а весь смысл кадра в том, что
+        обвинение занимает всё больше места.
+      */
+      backdrop={
+        cue === 'blame' ? (
+          <BlameScene beat={cueOrdinal(voice.run.index, 'blame')} />
+        ) : null
+      }
       cta={preframe.cta}
       onCta={next}
     />
@@ -217,7 +227,6 @@ function PreframeStage({ index, cue }: { index: number; cue: PreframeCue }) {
         {cue === 'city' && <DistrictScene lit={cueOrdinal(index, 'city') > 0} />}
         {cue === 'console' && <ConsoleScene />}
         {cue === 'claim' && <ClaimScene shown={cueOrdinal(index, 'claim')} />}
-        {cue === 'blame' && <BlameScene beat={cueOrdinal(index, 'blame')} />}
         {cue === 'author' && <AuthorScene />}
         {cue === 'gap' && <GapScene beat={cueOrdinal(index, 'gap')} />}
         {cue === 'tools' && <ToolsScene alone={cueOrdinal(index, 'tools') > 0} />}
@@ -394,11 +403,6 @@ function TypingDots({ reduceMotion }: { reduceMotion: boolean }) {
  * `from` — откуда указатель приезжает и куда уходит, когда клиент разворачивается
  * и уходит совсем.
  */
-const AIMS = [
-  { line: 'M 10 80 L 40 80', head: '40,74 52,80 40,86', from: { x: -22, y: 0 } },
-  { line: 'M 160 6 L 160 36', head: '154,36 166,36 160,48', from: { x: 0, y: -22 } },
-  { line: 'M 310 80 L 280 80', head: '280,74 268,80 280,86', from: { x: 22, y: 0 } },
-] as const;
 
 /**
  * Обвинение крупно.
@@ -413,54 +417,70 @@ const AIMS = [
  * именно уходят — тем же путём, которым пришли. Табличка остаётся стоять одна:
  * претензий больше нет, потому что спрашивать стало некому.
  */
+/**
+ * Приговор, который забирает экран.
+ *
+ * ЧТО ЗДЕСЬ БЫЛО И ПОЧЕМУ ЭТО НЕ РАБОТАЛО. Стояла табличка с именем района и три
+ * красных указателя, втыкающихся в неё по одному на такт. Указатели читались как
+ * схема — «сюда смотри», — а в записи происходит другое: одно и то же обвинение
+ * повторяют трижды, и каждый раз оно весит больше. Схема этого не передаёт.
+ *
+ * Теперь на заднике одна плашка с приговором, и она РАСТЁТ. Ничего не
+ * прилетает, ничего не указывает: обвинение просто занимает всё больше места,
+ * пока не забирает экран целиком. Ровно так это и ощущается со стороны того, на
+ * кого показывают.
+ *
+ * ПОЧЕМУ ЗАДНИК, А НЕ ВИТРИНА. Витрина — окно в углу афиши, и плашка в нём
+ * упёрлась бы в его край на втором же повторе. Забрать вес экрана можно только
+ * на слое во весь экран, за фигурой автора.
+ */
 function BlameScene({ beat }: { beat: number }) {
   const reduceMotion = useReducedMotion();
-  // Три указателя на три первых такта, дальше клиент разворачивается.
-  const aimed = Math.min(beat + 1, AIMS.length);
-  const gone = beat >= AIMS.length;
+
+  /**
+   * Пять тактов обвинения — пять размеров. Шаг неравномерный: между первым и
+   * вторым повтором прибавка заметнее, чем между четвёртым и пятым, потому что
+   * привыкание работает и здесь — чтобы давление ощущалось ровным, приращение
+   * должно замедляться.
+   */
+  const step = Math.min(beat, BLAME_SCALES.length - 1);
 
   return (
-    <div className="relative aspect-[2/1] w-full">
-      <svg
-        viewBox="0 0 320 160"
-        aria-hidden="true"
-        className="absolute inset-0 size-full"
+    <div
+      aria-hidden="true"
+      /*
+        ВЫШЕ СЕРЕДИНЫ, А НЕ ПО ЦЕНТРУ. По центру экрана стоит карточка плеера, и
+        приговор в первых повторах прятался за ней целиком — растёт, но не виден.
+        Здесь он живёт в верхней трети, за головой автора: место, куда взгляд
+        уходит сам, когда читает заголовок ниже.
+      */
+      className="pointer-events-none absolute inset-x-0 top-[24%] grid place-items-center overflow-hidden"
+    >
+      <motion.div
+        /*
+          Центрирование сеткой, а не сдвигом в `style`. Сдвиг пришлось бы задать
+          через `x`/`y`, а это те же поля, которыми motion управляет анимацией:
+          заданные вручную, они замораживают трансформацию, и приговор навсегда
+          остаётся начального размера. Ровно это здесь и произошло.
+        */
+        initial={reduceMotion ? false : { scale: BLAME_SCALES[0], opacity: 0 }}
+        animate={{ scale: BLAME_SCALES[step], opacity: 1 }}
+        // У приговора есть масса: он наваливается, а не выскакивает.
+        transition={calm(reduceMotion, tween(dur.screen, ease.inOut))}
       >
-        {AIMS.slice(0, aimed).map((aim) => (
-          <motion.g
-            key={aim.line}
-            initial={reduceMotion ? false : { opacity: 0, x: aim.from.x, y: aim.from.y }}
-            animate={{
-              opacity: gone ? 0 : 1,
-              x: gone ? aim.from.x : 0,
-              y: gone ? aim.from.y : 0,
-            }}
-            // У указателя есть масса: он приезжает и уезжает по кадру, а не
-            // появляется и исчезает на месте.
-            transition={calm(reduceMotion, tween(dur.screen, ease.inOut))}
-          >
-            <path
-              d={aim.line}
-              stroke="var(--color-alarm)"
-              strokeWidth={2}
-              fill="none"
-              vectorEffect="non-scaling-stroke"
-            />
-            <polygon points={aim.head} fill="var(--color-alarm)" />
-          </motion.g>
-        ))}
-      </svg>
-
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        <Plate>
-          <span className="font-display text-base font-semibold uppercase tracking-wide">
-            {HOME_SOURCE.name}
+        <Plate className="rotate-[-1.5deg]">
+          <span className="whitespace-nowrap font-display text-title font-semibold uppercase leading-none tracking-tight">
+            {preframe.blame}
           </span>
         </Plate>
-      </div>
+      </motion.div>
     </div>
   );
 }
+
+/** Размеры приговора по тактам: прибавка замедляется, давление растёт ровно. */
+const BLAME_SCALES = [0.9, 1.3, 1.7, 2.0, 2.2] as const;
+
 
 // ---------------------------------------------------------------------------
 // Такт 21–22. Автор говорит о себе
